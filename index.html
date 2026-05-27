@@ -3,164 +3,119 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Coin & Market Dashboard</title>
+    <title>실시간 증시·코인 시황 대시보드</title>
     <style>
         :root {
-            --bg-color: #0f172a;
-            --card-bg: #1e293b;
-            --accent-color: #38bdf8;
-            --text-color: #f8fafc;
-            --text-muted: #94a3b8;
-            --stock-up: #ef4444;
-            --coin-down: #3b82f6;
+            --bg-color: #0b0f19;
+            --card-bg: #151f32;
+            --text-main: #f3f4f6;
+            --text-sub: #9ca3af;
+            --up-color: #ef4444;
+            --down-color: #3b82f6;
+            --border-color: #24324d;
         }
         body {
             background-color: var(--bg-color);
-            color: var(--text-color);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: var(--text-main);
+            font-family: 'Pretendard', -apple-system, sans-serif;
             margin: 0;
-            padding: 15px;
-            display: flex;
-            justify-content: center;
-        }
-        .container {
-            width: 100%;
-            max-width: 800px;
+            padding: 20px;
         }
         header {
-            margin-bottom: 20px;
-            text-align: center;
-        }
-        h1 {
-            color: var(--accent-color);
-            font-size: 1.8rem;
-            margin-bottom: 5px;
-        }
-        .date {
-            color: var(--text-muted);
-            font-size: 0.9rem;
-            margin-bottom: 15px;
-        }
-
-        .card {
-            background-color: var(--card-bg);
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 15px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        }
-        h2 {
-            font-size: 1.15rem;
-            margin-top: 0;
-            color: #67e8f9;
-            border-left: 4px solid var(--accent-color);
-            padding-left: 10px;
-            margin-bottom: 15px;
-        }
-        .market-trend-box {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-        .trend-item {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-        .trend-label {
+            max-width: 1200px;
+            margin: 0 auto 20px auto;
             display: flex;
             justify-content: space-between;
-            font-size: 0.85rem;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
         }
-        .bar-container {
-            background-color: #334155;
-            border-radius: 6px;
-            height: 12px;
-            width: 100%;
-            overflow: hidden;
+        h1 { font-size: 20px; margin: 0; font-weight: 700; letter-spacing: -0.5px; }
+        .time-stamp { color: var(--text-sub); font-size: 14px; }
+        .section-title {
+            max-width: 1200px;
+            margin: 30px auto 15px auto;
+            font-size: 16px;
+            color: #10b981;
+            font-weight: 600;
         }
-        .bar-fill {
-            height: 100%;
-            border-radius: 6px;
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 10px 0;
         }
-        .bg-stock { background-color: var(--stock-up); }
-        .bg-coin { background-color: var(--coin-down); }
+        /* 사용자가 지정한 한 줄(Single Line) 강제 레이아웃 */
+        .market-item {
+            display: flex;
+            align-items: center;
+            white-space: nowrap;
+            overflow-x: auto;
+            padding: 12px 20px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 14px;
+        }
+        .market-item::-webkit-scrollbar { height: 4px; }
+        .market-item::-webkit-scrollbar-thumb { background: #374151; border-radius: 2px; }
+        .market-item:last-child { border-bottom: none; }
         
-        ul {
-            padding-left: 18px;
-            margin-bottom: 0;
-        }
-        li {
-            margin-bottom: 10px;
-            line-height: 1.5;
-            font-size: 0.95rem;
-        }
-        strong {
-            color: var(--accent-color);
-        }
-        a {
-            color: #38bdf8;
-            text-decoration: none;
-        }
-        a:hover {
-            text-decoration: underline;
-        }
+        .ticker { font-weight: 700; min-width: 140px; }
+        .divider { color: #4b5563; margin: 0 15px; font-weight: 300; }
+        .up { color: var(--up-color); font-weight: 600; }
+        .down { color: var(--down-color); font-weight: 600; }
+        .desc { color: var(--text-main); }
+        .badge-buy { background: rgba(239, 68, 68, 0.15); color: var(--up-color); padding: 2px 6px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+        .badge-hold { background: rgba(156, 163, 175, 0.15); color: var(--text-sub); padding: 2px 6px; border-radius: 4px; font-size: 12px; font-weight: 600; }
     </style>
 </head>
 <body>
+
+    <header>
+        <h1>📊 장중 실시간 시황 모니터링 센터</h1>
+        <div class="time-stamp">기준시각: 2026-05-28 09:30:00 (KST)</div>
+    </header>
+
+    <div class="section-title">1. 글로벌 지수 및 매크로 지표</div>
     <div class="container">
-        <header>
-            <h1>🪙 나만의 마켓 대시보드</h1>
-            <div class="date" id="current-date"></div>
-        </header>
-
-        <div class="card">
-            <h2>📊 글로벌 자금 쏠림 강도 (Money Move)</h2>
-            <div class="market-trend-box">
-                <div class="trend-item">
-                    <div class="trend-label">
-                        <span>🚀 반도체/AI 섹터 자금 유입</span>
-                        <span style="color: var(--stock-up); font-weight: bold;">매우 강함 (88%)</span>
-                    </div>
-                    <div class="bar-container">
-                        <div class="bar-fill bg-stock" style="width: 88%;"></div>
-                    </div>
-                </div>
-                <div class="trend-item">
-                    <div class="trend-label">
-                        <span>📉 가상자산 시장 자금 이탈</span>
-                        <span style="color: var(--coin-down); font-weight: bold;">정체/둔화 (32%)</span>
-                    </div>
-                    <div class="bar-container">
-                        <div class="bar-fill bg-coin" style="width: 32%;"></div>
-                    </div>
-                </div>
-            </div>
+        <div class="market-item">
+            <span class="ticker">코스피 (KOSPI)</span><span class="divider">:</span><span>8,228.70</span><span class="divider">│</span><span class="up">▲ 181.19 (+2.25%)</span><span class="divider">│</span><span class="desc">삼성전자와 SK하이닉스의 동반 사상 최고가 폭등에 힘입어 장 초반 매수 사이드카 발동 및 역사적 8,200선 돌파 성공</span>
         </div>
-
-        <div class="card">
-            <h2 style="color: #f43f5e;">📰 데일리 시장 핵심 브리핑</h2>
-            <ul>
-                <li>
-                    <strong>[반도체]</strong> AI 수요 폭발 지속, 주요 파운드리 고성능 칩 물량 수주 가속화로 반도체 쏠림 강해짐
-                    <br><small style="color: var(--text-muted);"><a href="https://news.naver.com/main/main.naver?mode=LSD&mid=shm&sid1=101" target="_blank">네이버 경제 속보 바로가기 ➔</a></small>
-                </li>
-                <li style="margin-top: 15px;">
-                    <strong>[가상자산]</strong> 비트코인 및 주요 암호화폐, 기관 매수세 유입 둔화 속에 단기 박스권 횡보 양상 지속
-                    <br><small style="color: var(--text-muted);"><a href="https://finance.naver.com" target="_blank">네이버 금융 바로가기 ➔</a></small>
-                </li>
-                <li style="margin-top: 15px;">
-                    <strong>[거시경제]</strong> 미 연준 금리 인하 기대감 엇갈리며 증시 혼조세, 자금 쏠림 현상 심화 분위기
-                    <br><small style="color: var(--text-muted);"><a href="https://news.naver.com" target="_blank">네이버 뉴스 홈 바로가기 ➔</a></small>
-                </li>
-            </ul>
+        <div class="market-item">
+            <span class="ticker">코스닥 (KOSDAQ)</span><span class="divider">:</span><span>1,133.13</span><span class="divider">│</span><span class="down">▼ 39.39 (-3.36%)</span><span class="divider">│</span><span class="desc">반도체 대형주로 시장 유동성이 극단적으로 쏠리면서 에코프로비엠 등 기존 시총 상위주들이 매물 조정을 받으며 지수 디커플링 전개</span>
         </div>
     </div>
 
-    <script>
-        // 상단 날짜 자동 표시
-        const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
-        document.getElementById('current-date').innerText = new Date().toLocaleDateString('ko-KR', options);
-    </script>
+    <div class="section-title">2. ⚡ 반도체 섹터 집중 분석 (Semi-Con Focus)</div>
+    <div class="container">
+        <div class="market-item">
+            <span class="ticker">삼성전자</span><span class="divider">:</span><span>307,000원</span><span class="divider">│</span><span class="up">▲ 8,000 (+2.68%)</span><span class="divider">│</span><span class="desc">노사 총파업 유예 기조 속 HBM3E 엔비디아 공급망 최종 진입 임박설이 돌며 장중 최고 323,000원 터치 및 역사상 최초로 30만 원대 고지 점령</span>
+        </div>
+        <div class="market-item">
+            <span class="ticker">SK하이닉스</span><span class="divider">:</span><span>2,243,000원</span><span class="divider">│</span><span class="up">▲ 191,000 (+9.31%)</span><span class="divider">│</span><span class="desc">간밤 미국 마이크론의 19% 폭등 훈풍을 정면으로 받으며 장중 2,358,000원까지 기록, 사상 첫 '200만 닉스' 안착 후 가파른 계단식 폭등 랠리 전개</span>
+        </div>
+        <div class="market-item">
+            <span class="ticker">엔비디아 (NVDA)</span><span class="divider">:</span><span>$212.60</span><span class="divider">│</span><span class="down">▼ 2.26 (-1.05%)</span><span class="divider">│</span><span class="desc">1분기 깜짝 실적 랠리 이후 단기 $210선 안착 및 차세대 블랙웰 칩 대량 출하 시점을 앞둔 건전한 매물 소화 세션</span>
+        </div>
+    </div>
+
+    <div class="section-title">3. 🚗 테슬라(TSLA) & 일론 머스크 제국 동향</div>
+    <div class="container">
+        <div class="market-item">
+            <span class="ticker">테슬라 (TSLA)</span><span class="divider">:</span><span>$440.36</span><span class="divider">│</span><span class="up">▲ 6.77 (+1.56%)</span><span class="divider">│</span><span class="desc">6월 12일 스페이스X 나스닥 상장 카운트다운 진입 및 나스닥 100 지수 초고속 편입 확정에 따른 테슬라 자금 일부 분산 우려를 완전히 압도하며 440달러선 상향 돌파</span>
+        </div>
+    </div>
+
+    <div class="section-title">4. 🪙 암호화폐 시황 및 기술적 진단</div>
+    <div class="container">
+        <div class="market-item">
+            <span class="ticker">비트코인 (BTC)</span><span class="divider">:</span><span>$77,362</span><span class="divider">│</span><span>111,478,000원</span><span class="divider">│</span><span class="desc">20일 이동평균선($76.2k) 구간에서 강력한 하방 지지 매물대를 형성 중이며 일봉 기준 RSI 52 수준으로 에너지를 재축적하는 국면</span><span class="divider">│</span><span class="badge-buy">매수 우위</span>
+        </div>
+        <div class="market-item">
+            <span class="ticker">이더리움 (ETH)</span><span class="divider">:</span><span>$2,129</span><span class="divider">│</span><span>3,215,000원</span><span class="divider">│</span><span class="desc">$2,100선 부근의 중장기 누적 매물대가 콘크리트 지지선 역할을 완벽히 수행 중이며 50일 이동평균선을 뚫어내기 위한 거래량 랠리 대기 중</span><span class="divider">│</span><span class="badge-hold">중립</span>
+        </div>
+    </div>
+
 </body>
 </html>
