@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -54,7 +52,7 @@
         h2 {
             font-size: 1.15rem;
             margin-top: 0;
-            color: #f43f5e;
+            color: #67e8f9;
             border-left: 4px solid var(--accent-color);
             padding-left: 10px;
             margin-bottom: 15px;
@@ -88,11 +86,24 @@
         .bg-stock { background-color: var(--stock-up); }
         .bg-coin { background-color: var(--coin-down); }
         
-        /* 📰 구글 뉴스 피드 컨테이너 스타일 */
-        .rss-feed-wrapper {
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        ul {
+            padding-left: 18px;
+            margin-bottom: 0;
+        }
+        li {
+            margin-bottom: 10px;
+            line-height: 1.5;
+            font-size: 0.95rem;
+        }
+        strong {
+            color: var(--accent-color);
+        }
+        a {
+            color: #38bdf8;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
         }
     </style>
 </head>
@@ -104,7 +115,7 @@
         </header>
 
         <div class="card">
-            <h2 style="color: #67e8f9; border-left-color: #67e8f9;">📊 글로벌 자금 쏠림 강도 (Money Move)</h2>
+            <h2>📊 글로벌 자금 쏠림 강도 (Money Move)</h2>
             <div class="market-trend-box">
                 <div class="trend-item">
                     <div class="trend-label">
@@ -127,17 +138,22 @@
             </div>
         </div>
 
-        <div class="card" style="padding: 10px;">
-            <h2 style="padding-left: 10px; margin-top: 10px; margin-bottom: 10px;">📰 실시간 시장 핵심 속보 (가상자산/반도체)</h2>
-            <div class="rss-feed-wrapper">
-                <iframe 
-                    src="https://www.rssdog.com/index.php?url=https%3A%2F%2Fnews.google.com%2Frss%2Fsearch%3Fq%3D%25EC%25BD%2594%25EC%259D%25B8%2520%25EB%25B0%2592%25EB%258F%2584%25EC%25B2%25B4%2520%25EC%258B%259A%25ED%2599%25A9%26hl%3Dko%26gl%3DKR%26ceid%3DKR%253Ako&mode=html&showonlytitle=1&maxitems=5&showdesc=0&bordercolor=1e293b&bgcolor=1e293b&linkcolor=38bdf8&textcolor=f8fafc&target=blank" 
-                    width="100%" 
-                    height="350" 
-                    frameborder="0" 
-                    scrolling="auto">
-                </iframe>
-            </div>
+        <div class="card">
+            <h2 style="color: #f43f5e;">📰 데일리 시장 핵심 브리핑</h2>
+            <ul>
+                <li>
+                    <strong>[반도체]</strong> AI 수요 폭발 지속, 주요 파운드리 고성능 칩 물량 수주 가속화로 반도체 쏠림 강해짐
+                    <br><small style="color: var(--text-muted);"><a href="https://news.naver.com/main/main.naver?mode=LSD&mid=shm&sid1=101" target="_blank">네이버 경제 속보 바로가기 ➔</a></small>
+                </li>
+                <li style="margin-top: 15px;">
+                    <strong>[가상자산]</strong> 비트코인 및 주요 암호화폐, 기관 매수세 유입 둔화 속에 단기 박스권 횡보 양상 지속
+                    <br><small style="color: var(--text-muted);"><a href="https://finance.naver.com" target="_blank">네이버 금융 바로가기 ➔</a></small>
+                </li>
+                <li style="margin-top: 15px;">
+                    <strong>[거시경제]</strong> 미 연준 금리 인하 기대감 엇갈리며 증시 혼조세, 자금 쏠림 현상 심화 분위기
+                    <br><small style="color: var(--text-muted);"><a href="https://news.naver.com" target="_blank">네이버 뉴스 홈 바로가기 ➔</a></small>
+                </li>
+            </ul>
         </div>
     </div>
 
@@ -148,4 +164,3 @@
     </script>
 </body>
 </html>
-
