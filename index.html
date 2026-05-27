@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Coin & Market Dashboard</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --accent-color: #38bdf8;
+            --text-color: #f8fafc;
+            --text-muted: #94a3b8;
+            --stock-up: #ef4444;
+            --coin-down: #3b82f6;
+        }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            width: 100%;
+            max-width: 800px;
+        }
+        header {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        h1 {
+            color: var(--accent-color);
+            font-size: 1.8rem;
+            margin-bottom: 5px;
+        }
+        .date {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+        }
+        
+        .btn-update {
+            background-color: #0284c7;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 20px;
+            font-size: 0.95rem;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.2s;
+        }
+        .btn-update:hover {
+            background-color: #0369a1;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        h2 {
+            font-size: 1.15rem;
+            margin-top: 0;
+            color: #f43f5e;
+            border-left: 4px solid var(--accent-color);
+            padding-left: 10px;
+            margin-bottom: 15px;
+        }
+        .market-trend-box {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .trend-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .trend-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+        }
+        .bar-container {
+            background-color: #334155;
+            border-radius: 6px;
+            height: 12px;
+            width: 100%;
+            overflow: hidden;
+        }
+        .bar-fill {
+            height: 100%;
+            border-radius: 6px;
+        }
+        .bg-stock { background-color: var(--stock-up); }
+        .bg-coin { background-color: var(--coin-down); }
+        
+        ul {
+            padding-left: 18px;
+            margin-bottom: 0;
+        }
+        li {
+            margin-bottom: 10px;
+            line-height: 1.5;
+            font-size: 0.95rem;
+        }
+        strong {
+            color: var(--accent-color);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🪙 나만의 마켓 대시보드</h1>
+            <div class="date" id="current-date"></div>
+            <button class="btn-update" onclick="fetchLiveNaverNews()">🔄 실시간 뉴스 즉시 새로고침</button>
+        </header>
+
+        <div class="card">
+            <h2 style="color: #67e8f9; border-left-color: #67e8f9;">📊 글로벌 자금 쏠림 강도 (Money Move)</h2>
+            <div class="market-trend-box">
+                <div class="trend-item">
+                    <div class="trend-label">
+                        <span>🚀 반도체/AI 섹터 자금 유입</span>
+                        <span style="color: var(--stock-up); font-weight: bold;">매우 강함 (88%)</span>
+                    </div>
+                    <div class="bar-container">
+                        <div class="bar-fill bg-stock" style="width: 88%;"></div>
+                    </div>
+                </div>
+                <div class="trend-item">
+                    <div class="trend-label">
+                        <span>📉 가상자산 시장 자금 이탈</span>
+                        <span style="color: var(--coin-down); font-weight: bold;">정체/둔화 (32%)</span>
+                    </div>
+                    <div class="bar-container">
+                        <div class="bar-fill bg-coin" style="width: 32%;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="news-content">
+            <div class="card">
+                <h2>🌐 실시간 네이버 뉴스 가져오는 중...</h2>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 상단 날짜 표시
+        const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
+        document.getElementById('current-date').innerText = new Date().toLocaleDateString('ko-KR', options);
+
+        // 🔄 사내망 우회용 실시간 네이버 뉴스 수집 엔진
+        async function fetchLiveNaverNews() {
+            const contentDiv = document.getElementById('news-content');
+            contentDiv.innerHTML = '<div class="card"><h2>🔄 최신 뉴스 분석 중...</h2></div>';
+            
+            // 네이버 뉴스 경제 섹션 RSS 주소
+            const naverRssUrl = "https://news.naver.com/rss/section/101";
+            
+            // 크로스도메인(CORS) 제한을 풀기 위한 공용 프록시 서버 활용
+            const proxyUrl = "https://api.allorigins.win/get?url=" + encodeURIComponent(naverRssUrl);
+
+            try {
+                const response = await fetch(proxyUrl);
+                if (!response.ok) throw new Error('네트워크 응답 실패');
+                
+                const wrapper = await response.json();
+                const xmlText = wrapper.contents;
+                
+                // XML 데이터 파싱
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(xmlText, "text/xml");
+                const items = xmlDoc.getElementsByTagName("item");
+                
+                let htmlContent = '';
+                let count = 0;
+                
+                // 크립토 / 금융 시장 관련 키워드 필터링
+                const keywords = ["코인", "비트코인", "가상자산", "암호화폐", "반도체", "증시", "주가", "금리"];
+
+                for (let i = 0; i < items.length; i++) {
+                    const title = items[i].getElementsByTagName("title")[0].textContent;
+                    const link = items[i].getElementsByTagName("link")[0].textContent;
+                    const pubDate = items[i].getElementsByTagName("pubDate")[0]?.textContent || "";
+                    
+                    // 키워드가 포함되어 있는지 검사
+                    if (keywords.some(keyword => title.includes(keyword))) {
+                        const shortDate = pubDate.substring(5, 22); // 보기 좋게 날짜 포맷 정리
+                        
+                        htmlContent += `
+                            <div class="card">
+                                <h2>📰 ${title}</h2>
+                                <ul>
+                                    <li><strong>출처:</strong> 네이버 경제 속보 (${shortDate})</li>
+                                    <li><strong>원문 링크:</strong> <a href="${link}" target="_blank" style="color: #38bdf8; text-decoration: none;">기사 보러가기 ➔</a></li>
+                                </ul>
+                            </div>
+                        `;
+                        count++;
+                        if (count >= 4) break; // 최대 4개 출력
+                    }
+                }
+
+                // 만약 특정 키워드 뉴스가 없으면 그냥 최신 경제 속보 4개 출력
+                if (count === 0) {
+                    for (let i = 0; i < Math.min(items.length, 4); i++) {
+                        const title = items[i].getElementsByTagName("title")[0].textContent;
+                        const link = items[i].getElementsByTagName("link")[0].textContent;
+                        htmlContent += `
+                            <div class="card">
+                                <h2>📰 ${title}</h2>
+                                <ul>
+                                    <li><strong>출처:</strong> 네이버 경제 속보</li>
+                                    <li><strong>원문 링크:</strong> <a href="${link}" target="_blank" style="color: #38bdf8; text-decoration: none;">기사 보러가기 ➔</a></li>
+                                </ul>
+                            </div>
+                        `;
+                    }
+                }
+
+                contentDiv.innerHTML = htmlContent;
+
+            } catch (error) {
+                console.error(error);
+                contentDiv.innerHTML = `
+                    <div class="card">
+                        <h2>⚠️ 실시간 뉴스 동기화 정체</h2>
+                        <p>사내망 보안(CORS) 혹은 네트워크 환경에 따라 로딩이 지연될 수 있습니다. 아래 버튼을 눌러 다시 시도해 주세요.</p>
+                    </div>
+                `;
+            }
+        }
+
+        // 웹페이지가 열릴 때 자동으로 뉴스 긁어오기 실행
+        window.onload = fetchLiveNaverNews;
+    </script>
+</body>
+</html>
