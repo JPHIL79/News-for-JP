@@ -123,9 +123,11 @@
         <header>
             <h1>🪙 나만의 마켓 대시보드</h1>
             <div class="date" id="current-date"></div>
+            <!-- 🔄 버튼을 누르면 브라우저가 직접 네이버 뉴스를 실시간으로 긁어옵니다 -->
             <button class="btn-update" onclick="fetchLiveNaverNews()">🔄 실시간 뉴스 즉시 새로고침</button>
         </header>
 
+        <!-- 자금 쏠림 지표 섹션 -->
         <div class="card">
             <h2 style="color: #67e8f9; border-left-color: #67e8f9;">📊 글로벌 자금 쏠림 강도 (Money Move)</h2>
             <div class="market-trend-box">
@@ -150,6 +152,7 @@
             </div>
         </div>
 
+        <!-- 뉴스 요약 섹션 -->
         <div id="news-content">
             <div class="card">
                 <h2>🌐 실시간 네이버 뉴스 가져오는 중...</h2>
@@ -158,11 +161,11 @@
     </div>
 
     <script>
-        // 상단 날짜 표시
+        // 상단 날짜 자동 표시
         const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
         document.getElementById('current-date').innerText = new Date().toLocaleDateString('ko-KR', options);
 
-        // 🔄 사내망 우회용 실시간 네이버 뉴스 수집 엔진
+        // 🚀 실시간 네이버 뉴스 수집 엔진 (사외망 전용)
         async function fetchLiveNaverNews() {
             const contentDiv = document.getElementById('news-content');
             contentDiv.innerHTML = '<div class="card"><h2>🔄 최신 뉴스 분석 중...</h2></div>';
@@ -170,7 +173,7 @@
             // 네이버 뉴스 경제 섹션 RSS 주소
             const naverRssUrl = "https://news.naver.com/rss/section/101";
             
-            // 크로스도메인(CORS) 제한을 풀기 위한 공용 프록시 서버 활용
+            // 사외망이라서 100% 뚫리는 공개 프록시 서버 활용
             const proxyUrl = "https://api.allorigins.win/get?url=" + encodeURIComponent(naverRssUrl);
 
             try {
@@ -188,7 +191,7 @@
                 let htmlContent = '';
                 let count = 0;
                 
-                // 크립토 / 금융 시장 관련 키워드 필터링
+                // 필터링 키워드
                 const keywords = ["코인", "비트코인", "가상자산", "암호화폐", "반도체", "증시", "주가", "금리"];
 
                 for (let i = 0; i < items.length; i++) {
@@ -196,9 +199,8 @@
                     const link = items[i].getElementsByTagName("link")[0].textContent;
                     const pubDate = items[i].getElementsByTagName("pubDate")[0]?.textContent || "";
                     
-                    // 키워드가 포함되어 있는지 검사
                     if (keywords.some(keyword => title.includes(keyword))) {
-                        const shortDate = pubDate.substring(5, 22); // 보기 좋게 날짜 포맷 정리
+                        const shortDate = pubDate.substring(5, 22); // 날짜 보기 좋게 자르기
                         
                         htmlContent += `
                             <div class="card">
@@ -210,13 +212,13 @@
                             </div>
                         `;
                         count++;
-                        if (count >= 4) break; // 최대 4개 출력
+                        if (count >= 5) break; // 상위 5개 출력
                     }
                 }
 
-                // 만약 특정 키워드 뉴스가 없으면 그냥 최신 경제 속보 4개 출력
+                // 키워드 뉴스가 없으면 그냥 최신 경제 속보 5개 출력
                 if (count === 0) {
-                    for (let i = 0; i < Math.min(items.length, 4); i++) {
+                    for (let i = 0; i < Math.min(items.length, 5); i++) {
                         const title = items[i].getElementsByTagName("title")[0].textContent;
                         const link = items[i].getElementsByTagName("link")[0].textContent;
                         htmlContent += `
@@ -237,14 +239,14 @@
                 console.error(error);
                 contentDiv.innerHTML = `
                     <div class="card">
-                        <h2>⚠️ 실시간 뉴스 동기화 정체</h2>
-                        <p>사내망 보안(CORS) 혹은 네트워크 환경에 따라 로딩이 지연될 수 있습니다. 아래 버튼을 눌러 다시 시도해 주세요.</p>
+                        <h2>⚠️ 실시간 뉴스 로딩 실패</h2>
+                        <p>네트워크 상태를 확인하시거나 아래 새로고침 버튼을 다시 눌러주세요.</p>
                     </div>
                 `;
             }
         }
 
-        // 웹페이지가 열릴 때 자동으로 뉴스 긁어오기 실행
+        // 앱이 켜지자마자 뉴스 자동 실행
         window.onload = fetchLiveNaverNews;
     </script>
 </body>
