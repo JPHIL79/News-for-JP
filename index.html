@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -40,24 +42,6 @@
             color: var(--text-muted);
             font-size: 0.9rem;
             margin-bottom: 15px;
-        }
-        
-        .btn-update {
-            background-color: #0284c7;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            padding: 12px 20px;
-            font-size: 0.95rem;
-            font-weight: bold;
-            cursor: pointer;
-            width: 100%;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
-            transition: background-color 0.2s;
-        }
-        .btn-update:hover {
-            background-color: #0369a1;
         }
 
         .card {
@@ -104,17 +88,11 @@
         .bg-stock { background-color: var(--stock-up); }
         .bg-coin { background-color: var(--coin-down); }
         
-        ul {
-            padding-left: 18px;
-            margin-bottom: 0;
-        }
-        li {
-            margin-bottom: 10px;
-            line-height: 1.5;
-            font-size: 0.95rem;
-        }
-        strong {
-            color: var(--accent-color);
+        /* 📰 구글 뉴스 피드 컨테이너 스타일 */
+        .rss-feed-wrapper {
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
     </style>
 </head>
@@ -123,7 +101,6 @@
         <header>
             <h1>🪙 나만의 마켓 대시보드</h1>
             <div class="date" id="current-date"></div>
-            <button class="btn-update" onclick="fetchLiveNews()">🔄 실시간 뉴스 즉시 새로고침</button>
         </header>
 
         <div class="card">
@@ -150,88 +127,25 @@
             </div>
         </div>
 
-        <div id="news-content">
-            <div class="card">
-                <h2>🌐 실시간 뉴스 가져오는 중...</h2>
+        <div class="card" style="padding: 10px;">
+            <h2 style="padding-left: 10px; margin-top: 10px; margin-bottom: 10px;">📰 실시간 시장 핵심 속보 (가상자산/반도체)</h2>
+            <div class="rss-feed-wrapper">
+                <iframe 
+                    src="https://www.rssdog.com/index.php?url=https%3A%2F%2Fnews.google.com%2Frss%2Fsearch%3Fq%3D%25EC%25BD%2594%25EC%259D%25B8%2520%25EB%25B0%2592%25EB%258F%2584%25EC%25B2%25B4%2520%25EC%258B%259A%25ED%2599%25A9%26hl%3Dko%26gl%3DKR%26ceid%3DKR%253Ako&mode=html&showonlytitle=1&maxitems=5&showdesc=0&bordercolor=1e293b&bgcolor=1e293b&linkcolor=38bdf8&textcolor=f8fafc&target=blank" 
+                    width="100%" 
+                    height="350" 
+                    frameborder="0" 
+                    scrolling="auto">
+                </iframe>
             </div>
         </div>
     </div>
 
     <script>
+        // 상단 날짜 자동 표시
         const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
         document.getElementById('current-date').innerText = new Date().toLocaleDateString('ko-KR', options);
-
-        async function fetchLiveNews() {
-            const contentDiv = document.getElementById('news-content');
-            contentDiv.innerHTML = '<div class="card"><h2>🔄 최신 뉴스 분석 중...</h2></div>';
-            
-            // 기존 터지던 올오리진 대신, 개발자들에게 가장 빠르고 안정적인 cors-anywhere의 퍼블릭 버전을 1순위로 사용합니다.
-            // 네이버 뉴스 RSS가 막힐 것을 대비해 기사 안정성이 높은 구글 뉴스 RSS 통로도 백업으로 준비했습니다.
-            const targetUrl = "https://news.google.com/rss/search?q=%EC%BD%94%EC%9D%B8%20%EB%B0%92%EB%8F%84%EC%B2%B4%20%EC%8B%9A%ED%99%A9&hl=ko&gl=KR&ceid=KR:ko";
-            const proxyUrl = "https://corsproxy.io/?" + encodeURIComponent(targetUrl);
-
-            try {
-                const response = await fetch(proxyUrl);
-                if (!response.ok) throw new Error('Proxy error');
-                
-                const xmlText = await response.text();
-                
-                const parser = new DOMParser();
-                const xmlDoc = parser.parseFromString(xmlText, "text/xml");
-                const items = xmlDoc.getElementsByTagName("item");
-                
-                let htmlContent = '';
-                // 상위 5개 주요 속보만 추출
-                const limit = Math.min(items.length, 5);
-
-                for (let i = 0; i < limit; i++) {
-                    let title = items[i].getElementsByTagName("title")[0].textContent;
-                    const link = items[i].getElementsByTagName("link")[0].textContent;
-                    const pubDate = items[i].getElementsByTagName("pubDate")[0]?.textContent || "";
-                    
-                    // 제목 끝에 붙는 언론사 꼬리표 정리 (예: - 네이버뉴스)
-                    if (title.includes(" - ")) {
-                        title = title.split(" - ")[0];
-                    }
-
-                    const shortDate = pubDate.substring(5, 16); 
-                    
-                    htmlContent += `
-                        <div class="card">
-                            <h2>📰 ${title}</h2>
-                            <ul>
-                                <li><strong>수집 시각:</strong> 주요 언론 속보 (${shortDate})</li>
-                                <li><strong>원문 링크:</strong> <a href="${link}" target="_blank" style="color: #38bdf8; text-decoration: none;">기사 보러가기 ➔</a></li>
-                            </ul>
-                        </div>
-                    `;
-                }
-
-                contentDiv.innerHTML = htmlContent;
-
-            } catch (error) {
-                console.error(error);
-                // 모든 프록시가 먹통일 때 사용자 편의를 위한 최종 가짜(Mock) 최신 금융 시황 데이터 자동 표출
-                contentDiv.innerHTML = `
-                    <div class="card">
-                        <h2>📰 [속보] 글로벌 자산 시장, 인플레이션 우려 둔화에 반등 기조</h2>
-                        <ul>
-                            <li><strong>요약:</strong> 기술주 중심의 매수세 유입 속 미 증시 안정화 흐름 확인.</li>
-                            <li><strong>원문 링크:</strong> <a href="https://news.naver.com" target="_blank" style="color: #38bdf8; text-decoration: none;">네이버 금융 홈 바로가기 ➔</a></li>
-                        </ul>
-                    </div>
-                    <div class="card">
-                        <h2>📰 비트코인, 주요 이평선 지지력 테스트 중... 횡보세 지속</h2>
-                        <ul>
-                            <li><strong>요약:</strong> 거래량이 다소 감소한 가운데 고래들의 매집 구간 진입 분석 우세.</li>
-                            <li><strong>원문 링크:</strong> <a href="https://news.naver.com" target="_blank" style="color: #38bdf8; text-decoration: none;">네이버 금융 홈 바로가기 ➔</a></li>
-                        </ul>
-                    </div>
-                `;
-            }
-        }
-
-        window.onload = fetchLiveNews;
     </script>
 </body>
 </html>
+
