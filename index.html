@@ -1,253 +1,167 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HFT 5초 자동 갱신 시황 대시보드 (캔들차트 탑재)</title>
-    <style>
-        :root {
-            --bg-color: #060913;
-            --card-bg: #0f1626;
-            --text-main: #f8fafc;
-            --text-sub: #94a3b8;
-            --up-color: #f87171;
-            --down-color: #60a5fa;
-            --border-color: #1e293b;
-            --accent-color: #10b981;
-        }
-        body {
-            background-color: var(--bg-color); color: var(--text-main);
-            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-            margin: 0; padding: 20px;
-        }
-        .wrapper { max-width: 1200px; margin: 0 auto; }
-        header {
-            display: flex; justify-content: space-between; align-items: center;
-            border-bottom: 2px solid var(--border-color); padding-bottom: 15px;
-        }
-        h1 { font-size: 18px; margin: 0; font-weight: 700; color: #e2e8f0; }
-        .status-badge { font-size: 12px; background: rgba(16, 185, 129, 0.1); color: var(--accent-color); padding: 4px 8px; border-radius: 4px; font-weight: 600; }
-        .section-title { font-size: 14px; color: var(--accent-color); font-weight: 600; margin: 25px 0 10px 5px; }
-        .board-container { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; }
-        .asset-row { border-bottom: 1px solid var(--border-color); cursor: pointer; }
-        .asset-row:hover { background: #1e293b; }
-        .asset-row:last-child { border-bottom: none; }
-        
-        /* 1열 강제 가로 정렬 횡스크롤 */
-        .single-line-bar {
-            display: flex; align-items: center; white-space: nowrap;
-            overflow-x: auto; padding: 13px 20px; font-size: 14px;
-        }
-        .single-line-bar::-webkit-scrollbar { height: 2px; }
-        .single-line-bar::-webkit-scrollbar-thumb { background: #334155; }
-        
-        .ticker { font-weight: 700; min-width: 160px; }
-        .divider { color: #475569; margin: 0 12px; }
-        .price { font-weight: 600; min-width: 110px; text-align: right; }
-        .change { font-weight: 600; min-width: 130px; margin-left: 10px; }
-        .up { color: var(--up-color); } .down { color: var(--down-color); }
-        .desc { color: #cbd5e1; }
+import React, { useEffect, useMemo, useState } from "react"; import { Card, CardContent } from "@/components/ui/card"; import { Button } from "@/components/ui/button"; import { Input } from "@/components/ui/input"; import { Badge } from "@/components/ui/badge"; import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"; import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, BarChart, Bar, ComposedChart, ReferenceLine } from "recharts"; import { Search, RefreshCw, TrendingUp, TrendingDown, Newspaper, Bitcoin, Cpu, Globe2, Zap, ExternalLink, Activity, BarChart3 } from "lucide-react"; import { motion } from "framer-motion";
 
-        .chart-drawer {
-            display: none; background: #090d16; padding: 15px 20px;
-            border-top: 1px dashed var(--border-color); justify-content: space-between; align-items: center;
-        }
-        .chart-drawer.active { display: flex; }
-        .chart-meta { font-size: 12px; color: var(--text-sub); }
-        .chart-canvas { background: #020617; border: 1px solid #1e293b; border-radius: 4px; }
-    </style>
-</head>
-<body>
+const nowText = () => new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", }).format(new Date());
 
-<div class="wrapper">
-    <header>
+const makeSeries = (base, volatility = 1.2, days = 30) => { const out = []; let close = base; for (let i = days - 1; i >= 0; i--) { const date = new Date(); date.setDate(date.getDate() - i); const open = close * (1 + (Math.random() - 0.5) * volatility / 100); close = open * (1 + (Math.random() - 0.48) * volatility / 80); const high = Math.max(open, close) * (1 + Math.random() * volatility / 100); const low = Math.min(open, close) * (1 - Math.random() * volatility / 100); out.push({ date: ${date.getMonth() + 1}/${date.getDate()}, open: Number(open.toFixed(2)), high: Number(high.toFixed(2)), low: Number(low.toFixed(2)), close: Number(close.toFixed(2)), volume: Math.floor(1000 + Math.random() * 6000), }); } return out; };
+
+const marketData = [ { group: "global", name: "KOSPI", ticker: "^KS11", price: "2,742.18", change: "+0.86%", direction: "up", sector: "반도체 · 금융 · 자동차", leaders: "삼성전자, SK하이닉스, 현대차, KB금융", summary: "외국인 수급과 반도체 대형주 반등이 지수 상승을 견인. 환율 안정 여부와 미국 기술주 흐름이 단기 변수.", colorLabel: "Korea Main Board", base: 2742, }, { group: "global", name: "KOSDAQ", ticker: "^KQ11", price: "854.31", change: "-0.24%", direction: "down", sector: "바이오 · 2차전지 · 로봇", leaders: "에코프로비엠, 알테오젠, 레인보우로보틱스", summary: "성장주 중심의 차익실현이 나타나는 가운데 개별 테마 장세가 지속. 거래대금 회복 여부가 중요.", colorLabel: "Korea Growth", base: 854, }, { group: "global", name: "S&P 500", ticker: "^GSPC", price: "5,842.72", change: "+0.41%", direction: "up", sector: "AI · 빅테크 · 금융", leaders: "NVIDIA, Microsoft, Broadcom, JPMorgan", summary: "AI 인프라 투자 기대가 대형 기술주를 지지. 금리 인하 기대와 실적 모멘텀이 함께 작용.", colorLabel: "US Large Cap", base: 5842, }, { group: "global", name: "NASDAQ", ticker: "^IXIC", price: "18,970.44", change: "+0.78%", direction: "up", sector: "AI 반도체 · 클라우드 · 소프트웨어", leaders: "NVIDIA, AMD, Meta, Amazon", summary: "AI, 데이터센터, 클라우드 관련주가 지수 흐름을 주도. 밸류에이션 부담은 단기 변동성 요인.", colorLabel: "US Tech", base: 18970, }, ];
+
+const semiconductorStocks = [ { name: "삼성전자", ticker: "005930.KS", price: "78,600", change: "+1.29%", direction: "up", summary: "HBM, 메모리 가격, 파운드리 수율 이슈가 핵심 체크포인트.", naver: "https://search.naver.com/search.naver?where=news&query=%EC%82%BC%EC%84%B1%EC%A0%84%EC%9E%90%20%EB%B0%98%EB%8F%84%EC%B2%B4" }, { name: "SK하이닉스", ticker: "000660.KS", price: "223,500", change: "+2.14%", direction: "up", summary: "HBM 공급, 고객사 인증, AI 서버 수요가 주가 모멘텀의 중심.", naver: "https://search.naver.com/search.naver?where=news&query=SK%ED%95%98%EC%9D%B4%EB%8B%89%EC%8A%A4%20HBM" }, { name: "NVIDIA", ticker: "NVDA", price: "1,128.40", change: "+1.92%", direction: "up", summary: "GPU, 네트워킹, CUDA 생태계가 AI 인프라 수요를 흡수.", naver: "https://search.naver.com/search.naver?where=news&query=NVIDIA%20%EB%89%B4%EC%8A%A4" }, { name: "TSMC", ticker: "TSM", price: "164.82", change: "+0.68%", direction: "up", summary: "CoWoS, 3나노, 2나노, AI 고객 물량이 핵심 투자 포인트.", naver: "https://search.naver.com/search.naver?where=news&query=TSMC%20%EB%89%B4%EC%8A%A4" }, { name: "Broadcom", ticker: "AVGO", price: "1,401.22", change: "+0.53%", direction: "up", summary: "AI ASIC, 네트워킹 칩, VMware 통합 효과가 관전 포인트.", naver: "https://search.naver.com/search.naver?where=news&query=Broadcom%20AI%20ASIC" }, { name: "AMD", ticker: "AMD", price: "166.74", change: "-0.32%", direction: "down", summary: "MI300 계열 AI 가속기와 서버 CPU 점유율 확대 여부가 중요.", naver: "https://search.naver.com/search.naver?where=news&query=AMD%20AI%20GPU" }, ];
+
+const teslaMusk = [ { name: "Tesla", ticker: "TSLA", price: "188.16", change: "+0.74%", direction: "up", summary: "전기차 수요, FSD, 로보택시, 에너지 저장장치가 핵심 이슈.", naver: "https://search.naver.com/search.naver?where=news&query=Tesla%20%ED%85%8C%EC%8A%AC%EB%9D%BC" }, { name: "SpaceX", ticker: "Private", price: "비상장", change: "뉴스 중심", direction: "flat", summary: "Starship 시험비행, Starlink 가입자, 국방·위성 발사 계약이 핵심 이슈.", naver: "https://search.naver.com/search.naver?where=news&query=SpaceX%20Starship%20Starlink" }, ];
+
+const cryptoAssets = [ { name: "BTC", ticker: "BTC-USD", price: "68,420", change: "+1.08%", direction: "up", summary: "ETF 자금 유입, 반감기 이후 공급 구조, 달러 유동성이 핵심.", naver: "https://search.naver.com/search.naver?where=news&query=%EB%B9%84%ED%8A%B8%EC%BD%94%EC%9D%B8%20BTC" }, { name: "ETH", ticker: "ETH-USD", price: "3,720", change: "+0.66%", direction: "up", summary: "스테이킹, ETF, L2 생태계, 디파이 활동성이 중요.", naver: "https://search.naver.com/search.naver?where=news&query=%EC%9D%B4%EB%8D%94%EB%A6%AC%EC%9B%80%20ETH" }, { name: "XRP", ticker: "XRP-USD", price: "0.52", change: "-0.41%", direction: "down", summary: "규제 뉴스와 결제 네트워크 채택 여부가 가격 변수.", naver: "https://search.naver.com/search.naver?where=news&query=XRP%20%EB%A6%AC%ED%94%8C" }, { name: "BNB", ticker: "BNB-USD", price: "596.10", change: "+0.22%", direction: "up", summary: "거래소 생태계, 수수료 소각, 규제 리스크를 함께 봐야 함.", naver: "https://search.naver.com/search.naver?where=news&query=BNB%20%EB%B0%94%EC%9D%B4%EB%82%B8%EC%8A%A4" }, { name: "SOL", ticker: "SOL-USD", price: "171.45", change: "+2.32%", direction: "up", summary: "고속 처리 성능, 밈코인·디파이 트래픽, 네트워크 안정성이 핵심.", naver: "https://search.naver.com/search.naver?where=news&query=SOL%20Solana%20%EC%86%94%EB%9D%BC%EB%82%98" }, ];
+
+const headlines = [ "AI 데이터센터 투자 확대가 반도체 밸류체인 전반의 실적 기대를 자극", "미국 금리 경로와 달러 흐름이 위험자산 선호도에 직접 영향", "한국 증시는 메모리 업황 회복 기대와 외국인 수급이 핵심 변수", "암호화폐 시장은 ETF 자금 흐름과 규제 뉴스에 민감하게 반응", ];
+
+function TrendIcon({ direction }) { if (direction === "down") return <TrendingDown className="h-4 w-4" />; if (direction === "flat") return <Activity className="h-4 w-4" />; return <TrendingUp className="h-4 w-4" />; }
+
+function ChangeBadge({ direction, children }) { const cls = direction === "down" ? "bg-rose-50 text-rose-700 border-rose-100" : direction === "flat" ? "bg-slate-50 text-slate-600 border-slate-200" : "bg-emerald-50 text-emerald-700 border-emerald-100"; return <Badge variant="outline" className={gap-1 ${cls}}><TrendIcon direction={direction} />{children}</Badge>; }
+
+function MiniCandleChart({ data }) { return ( <ResponsiveContainer width="100%" height={180}> <ComposedChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}> <CartesianGrid strokeDasharray="3 3" vertical={false} /> <XAxis dataKey="date" tick={{ fontSize: 11 }} interval={5} /> <YAxis domain={["dataMin", "dataMax"]} tick={{ fontSize: 11 }} width={48} /> <Tooltip formatter={(value) => value.toLocaleString()} /> <Area type="monotone" dataKey="close" fillOpacity={0.08} strokeWidth={2} /> <Bar dataKey="volume" yAxisId="volume" opacity={0.12} /> <Line type="monotone" dataKey="close" dot={false} strokeWidth={2.5} /> </ComposedChart> </ResponsiveContainer> ); }
+
+function MarketCard({ item }) { const data = useMemo(() => makeSeries(item.base), [item.base]); return ( <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}> <Card className="overflow-hidden rounded-2xl border-slate-200 bg-white/85 shadow-sm backdrop-blur"> <CardContent className="p-5"> <div className="mb-4 flex items-start justify-between gap-3"> <div> <div className="flex items-center gap-2"> <h3 className="text-lg font-bold text-slate-900">{item.name}</h3> <Badge variant="secondary" className="rounded-full">{item.colorLabel}</Badge> </div> <p className="mt-1 text-xs text-slate-500">{item.ticker}</p> </div> <ChangeBadge direction={item.direction}>{item.change}</ChangeBadge> </div>
+
+<div className="mb-4 flex items-end justify-between">
         <div>
-            <h1>📊 Real-Time 5S 인프라 종합 대시보드</h1>
-            <div style="color: var(--text-sub); font-size: 13px; margin-top: 5px;" id="liveClock">체결시각: 2026-05-28 09:30:00</div>
+          <p className="text-xs text-slate-500">현재가</p>
+          <p className="text-2xl font-bold tracking-tight text-slate-950">{item.price}</p>
         </div>
-        <div class="control-panel">
-            <span class="status-badge" id="statusIndicator">● 5초 데이터 동기화 활성</span>
-        </div>
-    </header>
+        <p className="text-right text-xs text-slate-500">실시간 API 연결 가능</p>
+      </div>
 
-    <div class="section-title">1. 글로벌 지수 및 매크로 지표</div>
-    <div class="board-container">
-        <div class="asset-row" onclick="toggleCandleChart(this, 'nasdaq')">
-            <div class="single-line-bar">
-                <span class="ticker">나스닥 종합 (Nasdaq)</span><span class="divider">:</span><span class="price" id="p-nasdaq">26,674.74</span><span class="divider">│</span><span class="change up" id="c-nasdaq">▲ 18.55 (+0.07%)</span><span class="divider">│</span><span class="desc">AI 밸류체인 실적 가시성 기반 테크주 하방 지지력 발휘하며 강보합 공방</span>
-            </div>
-            <div class="chart-drawer"><div class="chart-meta">📊 <b>3개월 일봉 캔들차트</b><br>직전 고점 매물 소화 후 우상향 발판 구축</div><canvas class="chart-canvas" width="300" height="80"></canvas></div>
+      <MiniCandleChart data={data} />
+
+      <div className="mt-4 grid gap-3 rounded-2xl bg-slate-50 p-4 text-sm">
+        <div><span className="font-semibold text-slate-800">시황</span><p className="mt-1 text-slate-600">{item.summary}</p></div>
+        <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+          <p><span className="font-semibold text-slate-800">주도주</span><br /><span className="text-slate-600">{item.leaders}</span></p>
+          <p><span className="font-semibold text-slate-800">섹터</span><br /><span className="text-slate-600">{item.sector}</span></p>
         </div>
-        <div class="asset-row" onclick="toggleCandleChart(this, 'sp500')">
-            <div class="single-line-bar">
-                <span class="ticker">S&P 500 지수</span><span class="divider">:</span><span class="price" id="p-sp500">7,520.46</span><span class="divider">│</span><span class="change up" id="c-sp500">▲ 1.34 (+0.02%)</span><span class="divider">│</span><span class="desc">7,500선 안착 이후 기관 투자자 패시브 자금 대거 유입 흐름 전개</span>
-            </div>
-            <div class="chart-drawer"><div class="chart-meta">📊 <b>3개월 일봉 캔들차트</b><br>단기 이평선 정배열 추세선 타고 계단식 상승 지지</div><canvas class="chart-canvas" width="300" height="80"></canvas></div>
-        </div>
-        <div class="asset-row" onclick="toggleCandleChart(this, 'us30y')">
-            <div class="single-line-bar">
-                <span class="ticker">美 30년 국채금리</span><span class="divider">:</span><span class="price" id="p-us30y">4.612%</span><span class="divider">│</span><span class="change down" id="c-us30y">▼ 0.042 (-0.91%)</span><span class="divider">│</span><span class="desc">인플레이션 지표 둔화 및 채권 매도세 진정 국면 진입에 따라 급등세 하향 안정</span>
-            </div>
-            <div class="chart-drawer"><div class="chart-meta">📊 <b>3개월 일봉 캔들차트</b><br>상단 저항선 확인 후 박스권 중심선 하향 이탈 트렌드</div><canvas class="chart-canvas" width="300" height="80"></canvas></div>
-        </div>
-        <div class="asset-row" onclick="toggleCandleChart(this, 'usdkrw')">
-            <div class="single-line-bar">
-                <span class="ticker">달러·원 환율</span><span class="divider">:</span><span class="price" id="p-usdkrw">1,499.05원</span><span class="divider">│</span><span class="change down" id="c-usdkrw">▼ 3.50 (-0.23%)</span><span class="divider">│</span><span class="desc">국내 증시로의 외인 자금 대규모 유입 연동 작용으로 1,500원선 하회 안착</span>
-            </div>
-            <div class="chart-drawer"><div class="chart-meta">📊 <b>3개월 일봉 캔들차트</b><br>단기 심리적 마지노선 1,500원선 공방 속 단기 하락 밴드 형성</div><canvas class="chart-canvas" width="300" height="80"></canvas></div>
-        </div>
+      </div>
+    </CardContent>
+  </Card>
+</motion.div>
+
+); }
+
+function AssetCard({ asset, icon }) { return ( <Card className="rounded-2xl border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"> <CardContent className="p-5"> <div className="flex items-start justify-between gap-4"> <div className="flex items-start gap-3"> <div className="rounded-2xl bg-slate-100 p-3 text-slate-700">{icon}</div> <div> <h3 className="text-base font-bold text-slate-950">{asset.name}</h3> <p className="text-xs text-slate-500">{asset.ticker}</p> </div> </div> <ChangeBadge direction={asset.direction}>{asset.change}</ChangeBadge> </div>
+
+<div className="mt-5 flex items-end justify-between gap-3">
+      <div>
+        <p className="text-xs text-slate-500">현재가</p>
+        <p className="text-2xl font-bold text-slate-950">{asset.price}</p>
+      </div>
+      <a href={asset.naver} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50">
+        네이버 뉴스 <ExternalLink className="h-3.5 w-3.5" />
+      </a>
     </div>
 
-    <div class="section-title">2. ⚡ 반도체 섹터 집중 분석 (Semi-Con Focus)</div>
-    <div class="board-container">
-        <div class="asset-row" onclick="toggleCandleChart(this, 'nvda')">
-            <div class="single-line-bar">
-                <span class="ticker">엔비디아 (NVDA)</span><span class="divider">:</span><span class="price" id="p-nvda">$212.60</span><span class="divider">│</span><span class="change down" id="c-nvda">▼ 2.26 (-1.05%)</span><span class="divider">│</span><span class="desc">어닝 서프라이즈 랠리 이후 블랙웰 본격 출하 단계 전 건전한 이격도 조정 진행</span>
-            </div>
-            <div class="chart-drawer"><div class="chart-meta">📊 <b>3개월 일봉 캔들차트</b><br>역사적 신고가 경신 이후 기간 조정 형태 매물 소화 양상</div><canvas class="chart-canvas" width="300" height="80"></canvas></div>
-        </div>
-        <div class="asset-row" onclick="toggleCandleChart(this, 'tsmc')">
-            <div class="single-line-bar">
-                <span class="ticker">TSMC (TSM)</span><span class="divider">:</span><span class="price" id="p-tsmc">$404.52</span><span class="divider">│</span><span class="change up" id="c-tsmc">▲ 6.13 (+1.54%)</span><span class="divider">│</span><span class="desc">3나노 이하 선단 공정 단가 대폭 인상 기조 및 가동률 95% 상회에 따른 독점력 수혜</span>
-            </div>
-            <div class="chart-drawer"><div class="chart-meta">📊 <b>3개월 일봉 캔들차트</b><br>수요 다변화 기반 견고한 볼린저 밴드 상단 돌파 지속</div><canvas class="chart-canvas" width="300" height="80"></canvas></div>
-        </div>
-        <div class="asset-row" onclick="toggleCandleChart(this, 'asml')">
-            <div class="single-line-bar">
-                <span class="ticker">ASML 홀딩</span><span class="divider">:</span><span class="price" id="p-asml">$1,632.90</span><span class="divider">│</span><span class="change up" id="c-asml">▲ 40.90 (+2.57%)</span><span class="divider">│</span><span class="desc">선단 공정 팹 경쟁 가속화로 대당 3.5억 달러 차세대 High-NA 장비 매출 인식本格화</span>
-            </div>
-            <div class="chart-drawer"><div class="chart-meta">📊 <b>3개월 일봉 캔들차트</b><br>수주잔고 백로그 신뢰감 바탕으로 견고한 정배열 상승 흐름</div><canvas class="chart-canvas" width="300" height="80"></canvas></div>
-        </div>
-        <div class="asset-row" onclick="toggleCandleChart(this, 'mu')">
-            <div class="single-line-bar">
-                <span class="ticker">마이크론 (MU)</span><span class="divider">:</span><span class="price" id="p-mu">$158.40</span><span class="divider">│</span><span class="change up" id="c-mu">▲ 25.20 (+18.9%)</span><span class="divider">│</span><span class="desc">HBM 공급 계약 가시성 확대로 하루 만에 시총 1조 달러 돌파하는 역사적 메가 폭등</span>
-            </div>
-            <div class="chart-drawer"><div class="chart-meta">📊 <b>3개월 일봉 캔들차트</b><br>수평 매물 저항대를 갭상승으로 완벽하게 돌파한 장대양봉 확인</div><canvas class="chart-canvas" width="300" height="80"></canvas></div>
-        </div>
-        <div class="asset-row" onclick="toggleCandleChart(this, 'avgo')">
-            <div class="single-line-bar">
-                <span class="ticker">브로드컴 (AVGO)</span><span class="divider">:</span><span class="price" id="p-avgo">$414.14</span><span class="divider">│</span><span class="change down" id="c-avgo">▼ 4.61 (-1.10%)</span><span class="divider">│</span><span class="desc">주요 빅테크 기업들의 인하우스 커스텀 AI 주문형 반도체(ASIC) 수주 물량 가파르게 폭증</span>
-            </div>
-            <div class="chart-drawer"><div class="chart-meta">📊 <b>3개월 일봉 캔들차트</b><br>400달러선 지지 기반 견고한 다중 바닥 패턴 완성 후 횡보</div><canvas class="chart-canvas" width="300" height="80"></canvas></div>
-        </div>
-        <div class="asset-row" onclick="toggleCandleChart(this, 'soxl')">
-            <div class="single-line-bar">
-                <span class="ticker">디렉시온 SOXL</span><span class="divider">:</span><span class="price" id="p-soxl">$64.20</span><span class="divider">│</span><span class="change up" id="c-soxl">▲ 4.15 (+6.91%)</span><span class="divider">│</span><span class="desc">필라델피아 반도체 지수 강세 연동 대규모 레버리지 패시브 추종 자금 거래대금 압도적 1위</span>
-            </div>
-            <div class="chart-drawer"><div class="chart-meta">📊 <b>3개월 일봉 캔들차트</b><br>변동성 밴드 하단 이탈 후 중앙선 위로 강력한 거래량 동반 V자 반등</div><canvas class="chart-canvas" width="300" height="80"></canvas></div>
-        </div>
-    </div>
+    <p className="mt-4 rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-650">{asset.summary}</p>
 
-    <div class="section-title">3. 🪙 암호화폐 시황 및 기술적 진단</div>
-    <div class="board-container">
-        <div class="asset-row" onclick="toggleCandleChart(this, 'xrp')">
-            <div class="single-line-bar">
-                <span class="ticker">리플 (XRP)</span><span class="divider">:</span><span class="price" id="p-xrp">$1.37</span><span class="divider">│</span><span class="change down" id="c-xrp">▼ 0.02 (-1.43%)</span><span class="divider">│</span><span class="desc">심리적 저항선 $1.42 돌파 실패 후 볼린저 밴드 하단 $1.35 지지 확보 시 기술적 낙폭 과대 반등 유효</span><span class="badge" style="background:rgba(148,163,184,0.1);color:var(--text-sub);margin-left:auto;">단기 중립</span>
-            </div>
-            <div class="chart-drawer"><div class="chart-meta">📊 <b>3개월 일봉 캔들차트</b><br>삼각 수렴 패턴 마바지 국면 진입에 따른 상방 변동성 대기</div><canvas class="chart-canvas" width="300" height="80"></canvas></div>
-        </div>
-        <div class="asset-row" onclick="toggleCandleChart(this, 'bnb')">
-            <div class="single-line-bar">
-                <span class="ticker">바이낸스코인 (BNB)</span><span class="divider">:</span><span class="price" id="p-bnb">$584.10</span><span class="divider">│</span><span class="change up" id="c-bnb">▲ 1.20 (+0.20%)</span><span class="divider">│</span><span class="desc">신규 런치패드 모멘텀 공백 상태 속에서 $570~$600 박스권 하단 매물 지지력 테스트 횡보 지속</span><span class="badge" style="background:rgba(148,163,184,0.1);color:var(--text-sub);margin-left:auto;">중립 포지션</span>
-            </div>
-            <div class="chart-drawer"><div class="chart-meta">📊 <b>3개월 일봉 캔들차트</b><br>안정적인 박스권 등락 속 채널 하단 수렴 패턴 형성 중</div><canvas class="chart-canvas" width="300" height="80"></canvas></div>
-        </div>
-        <div class="asset-row" onclick="toggleCandleChart(this, 'eth')">
-            <div class="single-line-bar">
-                <span class="ticker">이더리움 (ETH)</span><span class="divider">:</span><span class="price" id="p-eth">$2,129</span><span class="divider">│</span><span class="change up" id="c-eth">▲ 12.50 (+0.59%)</span><span class="divider">│</span><span class="desc">$2,100 중장기 누적 매물대가 강력 바닥 역할 확인, 50일선 상방 저항 돌파 위한 거래대금 랠리 대기</span><span class="badge style="background:rgba(16,185,129,0.1);color:var(--accent-color);margin-left:auto;">매수 우위</span>
-            </div>
-            <div class="chart-drawer"><div class="chart-meta">📊 <b>3개월 일봉 캔들차트</b><br>하락 추세 채널 완벽 상방 이탈 후 지지선 다지기 매집 포착</div><canvas class="chart-canvas" width="300" height="80"></canvas></div>
-        </div>
+    <div className="mt-4 space-y-2">
+      {[1, 2, 3].map((_, idx) => (
+        <a key={idx} href={asset.naver} target="_blank" rel="noreferrer" className="flex items-center justify-between rounded-xl border border-slate-100 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
+          <span className="line-clamp-1">{asset.name} 관련 최신 뉴스 헤드라인 #{idx + 1}</span>
+          <ExternalLink className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+        </a>
+      ))}
     </div>
+  </CardContent>
+</Card>
+
+); }
+
+function SectionHeader({ icon, title, description }) { return ( <div className="mb-5 flex items-start justify-between gap-4"> <div className="flex items-start gap-3"> <div className="rounded-2xl bg-slate-900 p-3 text-white">{icon}</div> <div> <h2 className="text-xl font-bold tracking-tight text-slate-950">{title}</h2> <p className="mt-1 text-sm text-slate-500">{description}</p> </div> </div> </div> ); }
+
+export default function GlobalMarketDashboard() { const [lastUpdated, setLastUpdated] = useState(nowText()); const [query, setQuery] = useState("");
+
+useEffect(() => { const timer = setInterval(() => setLastUpdated(nowText()), 1000); return () => clearInterval(timer); }, []);
+
+const filteredSemi = semiconductorStocks.filter((x) => ${x.name} ${x.ticker}.toLowerCase().includes(query.toLowerCase())); const filteredCrypto = cryptoAssets.filter((x) => ${x.name} ${x.ticker}.toLowerCase().includes(query.toLowerCase()));
+
+return ( <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 text-slate-900"> <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/80 backdrop-blur-xl"> <div className="mx-auto flex max-w-7xl flex-col gap-4 px-5 py-4 md:flex-row md:items-center md:justify-between"> <div> <div className="flex items-center gap-2"> <Globe2 className="h-6 w-6 text-slate-900" /> <h1 className="text-2xl font-extrabold tracking-tight text-slate-950">Global Market Morning Board</h1> </div> <p className="mt-1 text-sm text-slate-500">글로벌 시황 · 반도체 · 테슬라/머스크 · 암호화폐를 한 화면에서 요약</p> </div> <div className="flex flex-col gap-2 sm:flex-row sm:items-center"> <div className="relative"> <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" /> <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="종목 검색" className="w-full rounded-full pl-9 sm:w-56" /> </div> <Button onClick={() => setLastUpdated(nowText())} className="rounded-full gap-2"> <RefreshCw className="h-4 w-4" /> 업데이트 </Button> </div> </div> </header>
+
+<main className="mx-auto max-w-7xl px-5 py-8">
+    <section className="mb-8 grid gap-5 lg:grid-cols-[1.6fr_1fr]">
+      <Card className="rounded-3xl border-slate-200 bg-slate-950 text-white shadow-lg">
+        <CardContent className="p-7">
+          <div className="mb-5 flex flex-wrap items-center gap-2">
+            <Badge className="rounded-full bg-white text-slate-950 hover:bg-white">오늘의 종합 요약</Badge>
+            <span className="text-xs text-slate-400">Last updated: {lastUpdated}</span>
+          </div>
+          <h2 className="text-3xl font-extrabold leading-tight md:text-4xl">AI 반도체 중심의 위험자산 선호가 이어지는 가운데, 금리·환율·뉴스 플로우가 단기 방향성을 결정합니다.</h2>
+          <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-300">KOSPI와 NASDAQ은 AI 인프라 투자 기대에 민감하게 반응하고, 암호화폐는 ETF 자금 흐름과 규제 뉴스에 따라 변동성이 확대될 수 있습니다. 한국 시장은 메모리 사이클, 미국 시장은 빅테크 실적, 크립토는 유동성 환경을 함께 점검하는 구성이 적합합니다.</p>
+          <div className="mt-6 grid gap-3 sm:grid-cols-2">
+            {headlines.map((h, i) => (
+              <div key={i} className="rounded-2xl bg-white/8 p-4 text-sm text-slate-200 ring-1 ring-white/10">{h}</div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-3xl border-slate-200 bg-white shadow-sm">
+        <CardContent className="p-7">
+          <div className="flex items-center gap-2">
+            <BarChart3 className="h-5 w-5 text-slate-700" />
+            <h3 className="font-bold text-slate-950">오늘 체크포인트</h3>
+          </div>
+          <div className="mt-5 space-y-4">
+            <div className="rounded-2xl bg-emerald-50 p-4"><p className="text-sm font-semibold text-emerald-800">상승 요인</p><p className="mt-1 text-sm text-emerald-700">AI CAPEX, HBM 수요, 대형 기술주 실적 기대</p></div>
+            <div className="rounded-2xl bg-amber-50 p-4"><p className="text-sm font-semibold text-amber-800">중립 변수</p><p className="mt-1 text-sm text-amber-700">FOMC 발언, 미국 CPI/PCE, 원달러 환율</p></div>
+            <div className="rounded-2xl bg-rose-50 p-4"><p className="text-sm font-semibold text-rose-800">리스크</p><p className="mt-1 text-sm text-rose-700">밸류에이션 부담, 지정학 이슈, 규제 뉴스</p></div>
+          </div>
+        </CardContent>
+      </Card>
+    </section>
+
+    <Tabs defaultValue="markets" className="space-y-8">
+      <TabsList className="grid h-auto w-full grid-cols-2 rounded-2xl bg-slate-100 p-1 md:grid-cols-5">
+        <TabsTrigger value="markets" className="rounded-xl">글로벌 시황</TabsTrigger>
+        <TabsTrigger value="semis" className="rounded-xl">반도체</TabsTrigger>
+        <TabsTrigger value="tesla" className="rounded-xl">Tesla & Musk</TabsTrigger>
+        <TabsTrigger value="crypto" className="rounded-xl">암호화폐</TabsTrigger>
+        <TabsTrigger value="summary" className="rounded-xl">종합 요약</TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="markets" className="space-y-5">
+        <SectionHeader icon={<Globe2 className="h-5 w-5" />} title="오늘의 글로벌 시황 및 매크로 요약" description="KOSPI, KOSDAQ, S&P 500, NASDAQ의 현재가·시황·주도주·섹터·30일 차트" />
+        <div className="grid gap-5 lg:grid-cols-2">{marketData.map((item) => <MarketCard key={item.name} item={item} />)}</div>
+      </TabsContent>
+
+      <TabsContent value="semis" className="space-y-5">
+        <SectionHeader icon={<Cpu className="h-5 w-5" />} title="반도체 섹터" description="삼성전자, SK하이닉스, NVIDIA, TSMC, Broadcom, AMD의 시세와 뉴스" />
+        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">{filteredSemi.map((asset) => <AssetCard key={asset.name} asset={asset} icon={<Cpu className="h-5 w-5" />} />)}</div>
+      </TabsContent>
+
+      <TabsContent value="tesla" className="space-y-5">
+        <SectionHeader icon={<Zap className="h-5 w-5" />} title="테슬라 & 일론 머스크" description="Tesla 주가와 SpaceX 관련 최신 뉴스 흐름" />
+        <div className="grid gap-5 md:grid-cols-2">{teslaMusk.map((asset) => <AssetCard key={asset.name} asset={asset} icon={<Zap className="h-5 w-5" />} />)}</div>
+      </TabsContent>
+
+      <TabsContent value="crypto" className="space-y-5">
+        <SectionHeader icon={<Bitcoin className="h-5 w-5" />} title="암호화폐" description="BTC, ETH, XRP, BNB, SOL 가격과 뉴스 헤드라인" />
+        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">{filteredCrypto.map((asset) => <AssetCard key={asset.name} asset={asset} icon={<Bitcoin className="h-5 w-5" />} />)}</div>
+      </TabsContent>
+
+      <TabsContent value="summary" className="space-y-5">
+        <SectionHeader icon={<Newspaper className="h-5 w-5" />} title="종합 요약" description="오늘 시장을 한 문단으로 해석하고 투자 체크포인트를 정리" />
+        <Card className="rounded-3xl border-slate-200 bg-white shadow-sm">
+          <CardContent className="p-7">
+            <div className="prose max-w-none prose-slate">
+              <h3 className="text-xl font-bold">오늘의 결론</h3>
+              <p className="leading-7 text-slate-700">현재 시장의 핵심 축은 <strong>AI 인프라 투자 → 반도체 수요 → 빅테크 실적 → 글로벌 위험자산 선호</strong>로 연결됩니다. 한국 시장에서는 삼성전자와 SK하이닉스의 메모리 업황 회복, 미국 시장에서는 NVIDIA·Broadcom·AMD 중심의 AI 반도체 체인이 가장 중요합니다. 테슬라는 전기차 판매보다 FSD·로보택시·에너지 사업 기대가 주가 재평가 요인이고, 암호화폐는 비트코인 ETF 자금 유입과 금리 경로가 전체 시장 분위기를 결정할 가능성이 큽니다.</p>
+              <div className="mt-6 grid gap-4 md:grid-cols-3">
+                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-5"><p className="font-bold">공격적 관점</p><p className="mt-2 text-sm text-slate-600">AI·HBM·데이터센터 수요가 계속 강하면 반도체와 NASDAQ 중심 강세 지속.</p></div>
+                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-5"><p className="font-bold">중립 관점</p><p className="mt-2 text-sm text-slate-600">금리와 환율 안정 전까지는 지수보다 섹터·종목별 차별화 장세.</p></div>
+                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-5"><p className="font-bold">방어적 관점</p><p className="mt-2 text-sm text-slate-600">밸류에이션 부담과 정책 이벤트가 겹치면 단기 차익실현 가능성 확대.</p></div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </TabsContent>
+    </Tabs>
+  </main>
 </div>
 
-<script>
-    // 3개월 OHLC 캔들 매트릭스 모의 데이터 세트 (시가, 고가, 저가, 종가 리스트)
-    const candleDb = {
-        nasdaq: [[25500,25700,25400,25600], [25600,25900,25550,25850], [25850,26100,25700,26000], [26000,26400,25900,26350], [26350,26800,26200,26674]],
-        sp500: [[7200,7290,7180,7250], [7250,7350,7230,7310], [7310,7420,7300,7400], [7400,7490,7380,7470], [7470,7550,7450,7520]],
-        us30y: [[4.85,4.90,4.81,4.83], [4.83,4.86,4.75,4.78], [4.78,4.80,4.69,4.72], [4.72,4.75,4.63,4.66], [4.66,4.68,4.58,4.61]],
-        usdkrw: [[1520,1535,1515,1528], [1528,1530,1505,1512], [1512,1518,1498,1503], [1503,1508,1492,1496], [1496,1502,1493,1499]],
-        nvda: [[185,195,182,190], [190,205,188,202], [202,218,200,215], [215,224,211,214], [214,216,210,212.6]],
-        tsmc: [[360,372,358,368], [368,380,365,375], [375,389,372,384], [384,398,381,395], [395,408,393,404.5]],
-        asml: [[1480,1520,1470,1510], [1510,1550,1495,1540], [1540,1590,1530,1585], [1585,1620,1570,1605], [1605,1645,1600,1632.9]],
-        mu: [[110,118,109,115], [115,124,113,121], [121,129,120,126], [126,134,124,133], [133,162,132,158.4]],
-        avgo: [[385,395,381,392], [392,404,390,401], [401,415,398,412], [412,420,410,416], [416,418,411,414.14]],
-        soxl: [[45,49,44,48], [48,54,47,52], [52,58,51,56], [56,62,54,60], [60,66,59,64.2]],
-        xrp: [[1.10,1.25,1.08,1.21], [1.21,1.34,1.19,1.30], [1.30,1.48,1.28,1.44], [1.44,1.46,1.35,1.39], [1.39,1.41,1.34,1.37]],
-        bnb: [[550,568,545,562], [562,575,558,571], [571,590,569,584], [584,588,576,580], [580,587,579,584.1]],
-        eth: [[1950,2020,1940,1990], [1990,2080,1970,2050], [2050,2140,2030,2110], [2110,2150,2090,2122], [2122,2145,2112,2129]]
-    };
-
-    function toggleCandleChart(row, key) {
-        const drawer = row.querySelector('.chart-drawer');
-        drawer.classList.toggle('active');
-        if(drawer.classList.contains('active')) {
-            renderCandles(drawer.querySelector('canvas'), candleDb[key]);
-        }
-    }
-
-    function renderCandles(canvas, candles) {
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
-        // 데이터 전체 최소/최대축 계산
-        let allValues = candles.flat();
-        let max = Math.max(...allValues); let min = Math.min(...allValues);
-        let range = max - min || 1;
-
-        const candleWidth = 24; const gap = 20; const startX = 30;
-
-        candles.forEach((candle, i) => {
-            const [open, high, low, close] = candle;
-            const isBullish = close >= open;
-            
-            // Y좌표 픽셀 매핑
-            const yOpen = canvas.height - 10 - ((open - min) / range) * (canvas.height - 20);
-            const yClose = canvas.height - 10 - ((close - min) / range) * (canvas.height - 20);
-            const yHigh = canvas.height - 10 - ((high - min) / range) * (canvas.height - 20);
-            const yLow = canvas.height - 10 - ((low - min) / range) * (canvas.height - 20);
-            
-            const x = startX + i * (candleWidth + gap);
-
-            ctx.strokeStyle = isBullish ? '#f87171' : '#60a5fa';
-            ctx.fillStyle = isBullish ? '#f87171' : '#60a5fa';
-            ctx.lineWidth = 2;
-
-            // 1. 위아래 꼬리(Wick) 그리기
-            ctx.beginPath();
-            ctx.moveTo(x + candleWidth / 2, yHigh);
-            ctx.lineTo(x + candleWidth / 2, yLow);
-            ctx.stroke();
-
-            // 2. 몸통(Body) 그리기
-            const bodyHeight = Math.abs(yOpen - yClose) || 2;
-            const topY = Math.min(yOpen, yClose);
-            ctx.fillRect(x, topY, candleWidth, bodyHeight);
-        });
-    }
-
-    // 5초 인터벌 자동 동기화 기능 로직
-    setInterval(() => {
-        const now = new Date();
-        const timeStr = `체결시각: 2026-05-28 ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
-        document.getElementById('liveClock').innerText = timeStr;
-
-        // 가격 난수 생성 (실시간 미세 틱 시뮬레이션)
-        const nasdaqPrice = (26674.74 + (Math.random() - 0.5) * 15).toFixed(2);
-        document.getElementById('p-nasdaq').innerText = nasdaqPrice;
-
-        const nvdaPrice = (212.60 + (Math.random() - 0.5) * 0.8).toFixed(2);
-        document.getElementById('p-nvda').innerText = `$${nvdaPrice}`;
-
-        const ethPrice = Math.floor(2129 + (Math.random() - 0.5) * 6);
-        document.getElementById('p-eth').innerText = `$${ethPrice}`;
-
-        // 인디케이터 깜빡임 효과로 연동 상태 알림
-        const ind = document.getElementById('statusIndicator');
-        ind.style.opacity = ind.style.opacity === '0.5' ? '1' : '0.5';
-
-    }, 5000);
-</script>
-</body>
-</html>
+); }
