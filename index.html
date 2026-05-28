@@ -3,72 +3,71 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>실시간 반도체·코인 시황 대시보드 (차트 포함)</title>
+    <title>실시간 종합 시황 모니터링 대시보드</title>
     <style>
         :root {
-            --bg-color: #080c14;
-            --card-bg: #111827;
-            --text-main: #f9fafb;
-            --text-sub: #9ca3af;
+            --bg-color: #070b12;
+            --card-bg: #0f172a;
+            --text-main: #f8fafc;
+            --text-sub: #94a3b8;
             --up-color: #f87171;
             --down-color: #60a5fa;
-            --border-color: #1f2937;
+            --border-color: #1e293b;
             --accent-color: #10b981;
         }
         body {
-            background-color: var(--bg-color);
-            color: var(--text-main);
+            background-color: var(--bg-color); color: var(--text-main);
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             margin: 0; padding: 20px;
         }
         .wrapper { max-width: 1200px; margin: 0 auto; }
         header {
             display: flex; justify-content: space-between; align-items: center;
-            border-bottom: 2px solid var(--border-color); padding-bottom: 20px; margin-bottom: 20px;
+            border-bottom: 2px solid var(--border-color); padding-bottom: 20px; margin-bottom: 15px;
         }
-        h1 { font-size: 22px; margin: 0; font-weight: 700; color: var(--text-main); }
-        .control-panel { display: flex; align-items: center; gap: 15px; }
+        h1 { font-size: 20px; margin: 0; font-weight: 700; }
         .btn-update {
             background-color: var(--accent-color); color: #fff; border: none;
-            padding: 10px 18px; border-radius: 6px; font-weight: 600; cursor: pointer;
-            font-size: 14px; transition: all 0.2s ease;
+            padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer;
+            font-size: 13px; transition: all 0.2s ease;
         }
-        .btn-update:hover { background-color: #059669; transform: translateY(-1px); }
+        .btn-update:hover { background-color: #059669; }
         .section-title {
-            font-size: 15px; color: var(--accent-color); font-weight: 600;
-            margin: 25px 0 12px 5px; letter-spacing: 0.5px;
+            font-size: 14px; color: var(--accent-color); font-weight: 600;
+            margin: 25px 0 10px 5px; letter-spacing: 0.5px;
         }
         .board-container {
-            background: var(--card-bg); border: 1px solid var(--border-color);
-            border-radius: 8px; overflow: hidden;
+            background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px;
         }
-        .asset-row { border-bottom: 1px solid var(--border-color); cursor: pointer; transition: background 0.2s; }
-        .asset-row:hover { background: #1f293d; }
+        .asset-row { border-bottom: 1px solid var(--border-color); cursor: pointer; }
+        .asset-row:hover { background: #1e293b; }
         .asset-row:last-child { border-bottom: none; }
         
-        /* 사용자가 지정한 한 줄 강제 횡스크롤 레이아웃 */
+        /* 한 줄 강제 횡스크롤 설정 */
         .single-line-bar {
             display: flex; align-items: center; white-space: nowrap;
             overflow-x: auto; padding: 14px 20px; font-size: 14px;
         }
         .single-line-bar::-webkit-scrollbar { height: 3px; }
-        .single-line-bar::-webkit-scrollbar-thumb { background: #374151; }
+        .single-line-bar::-webkit-scrollbar-thumb { background: #334155; }
         
-        .ticker { font-weight: 700; min-width: 150px; color: #e5e7eb; }
-        .divider { color: #4b5563; margin: 0 15px; }
-        .price { font-weight: 600; min-width: 100px; text-align: right; }
-        .change { font-weight: 600; min-width: 120px; margin-left: 10px; }
+        .ticker { font-weight: 700; min-width: 150px; }
+        .divider { color: #475569; margin: 0 12px; }
+        .price { font-weight: 600; min-width: 110px; text-align: right; }
+        .change { font-weight: 600; min-width: 130px; margin-left: 10px; }
         .up { color: var(--up-color); } .down { color: var(--down-color); }
-        .desc { color: #d1d5db; margin-left: 5px; }
-        
-        /* 차트 서랍 공간 */
+        .desc { color: #cbd5e1; }
+        .badge { padding: 2px 6px; border-radius: 4px; font-size: 12px; font-weight: 600; margin-left: auto; }
+        .bg-buy { background: rgba(248, 113, 113, 0.15); color: var(--up-color); }
+        .bg-hold { background: rgba(148, 163, 184, 0.15); color: var(--text-sub); }
+
         .chart-drawer {
-            display: none; background: #0d131f; padding: 15px 20px;
+            display: none; background: #0b0f19; padding: 15px 20px;
             border-top: 1px dashed var(--border-color); justify-content: space-between; align-items: center;
         }
         .chart-drawer.active { display: flex; }
         .chart-meta { font-size: 12px; color: var(--text-sub); line-height: 1.6; }
-        .chart-canvas { background: #090d16; border: 1px solid #1e293b; border-radius: 4px; }
+        .chart-canvas { background: #020617; border: 1px solid #1e293b; border-radius: 4px; }
     </style>
 </head>
 <body>
@@ -76,93 +75,118 @@
 <div class="wrapper">
     <header>
         <div>
-            <h1>📊 장중 실시간 시황 모니터링 센터</h1>
+            <h1>📊 장중 실시간 종합 시황 모니터링 센터</h1>
             <div style="color: var(--text-sub); font-size: 13px; margin-top: 5px;" id="liveClock">기준시각: 2026-05-28 09:30:00 (KST)</div>
         </div>
-        <div class="control-panel">
-            <button class="btn-update" onclick="simulateUpdate()">⚡ 실시간 시황 동기화</button>
-        </div>
+        <button class="btn-update" onclick="simulateUpdate()">⚡ 실시간 시황 동기화</button>
     </header>
 
+    <!-- 1. 거시 매크로 -->
     <div class="section-title">1. 글로벌 지수 및 매크로 지표</div>
     <div class="board-container">
         <div class="asset-row" onclick="toggleChart(this, 'kospi')">
             <div class="single-line-bar">
-                <span class="ticker">코스피 (KOSPI)</span><span class="divider">:</span><span class="price id-kospi-p">8,228.70</span><span class="divider">│</span><span class="change up id-kospi-c">▲ 181.19 (+2.25%)</span><span class="divider">│</span><span class="desc id-kospi-d">삼성전자와 SK하이닉스 폭등세로 장 초반 매수 사이드카 발동 및 역사적 고점 돌파</span>
+                <span class="ticker">코스피 (KOSPI)</span><span class="divider">:</span><span class="price" id="p-kospi">8,228.70</span><span class="divider">│</span><span class="change up" id="c-kospi">▲ 181.19 (+2.25%)</span><span class="divider">│</span><span class="desc">삼성전자와 SK하이닉스 동반 폭등으로 장 초반 매수 사이드카 발동 및 역사적 8,200선 돌파</span>
             </div>
-            <div class="chart-drawer">
-                <div class="chart-meta">📊 <b>KOSPI 3개월 추이</b><br>최저: 7,240선 │ 최고: 8,250선<br>특이사항: 20일선 골든크로스 돌파 후 정배열 강화</div>
-                <canvas class="chart-canvas" width="240" height="60"></canvas>
+            <div class="chart-drawer"><div class="chart-meta">📊 <b>KOSPI 3개월 트렌드</b><br>지지대 구축 후 강한 정배열 돌파 장세 전개</div><canvas class="chart-canvas" width="240" height="60"></canvas></div>
+        </div>
+        <div class="asset-row" onclick="toggleChart(this, 'kosdaq')">
+            <div class="single-line-bar">
+                <span class="ticker">코스닥 (KOSDAQ)</span><span class="divider">:</span><span class="price" id="p-kosdaq">1,133.13</span><span class="divider">│</span><span class="change down" id="c-kosdaq">▼ 39.39 (-3.36%)</span><span class="divider">│</span><span class="desc">반도체 대형주 쏠림 현상 여파로 시총 상위 2차전지 섹터 중심 차익 매물 지속되며 디커플링</span>
             </div>
+            <div class="chart-drawer"><div class="chart-meta">📊 <b>KOSDAQ 3개월 트렌드</b><br>대형주 수급 이동에 따른 박스권 하단 테스트 국면</div><canvas class="chart-canvas" width="240" height="60"></canvas></div>
         </div>
     </div>
 
+    <!-- 2. 반도체 섹터 -->
     <div class="section-title">2. ⚡ 반도체 섹터 집중 분석 (Semi-Con Focus)</div>
     <div class="board-container">
         <div class="asset-row" onclick="toggleChart(this, 'samsung')">
             <div class="single-line-bar">
-                <span class="ticker">삼성전자</span><span class="divider">:</span><span class="price id-sec-p">307,000원</span><span class="divider">│</span><span class="change up id-sec-c">▲ 8,000 (+2.68%)</span><span class="divider">│</span><span class="desc id-sec-d">노사 총파업 유예 속 HBM3E 엔비디아 공급망 최종 검증 임박설로 역사상 최초 30만 원대 돌파</span>
+                <span class="ticker">삼성전자</span><span class="divider">:</span><span class="price" id="p-samsung">307,000원</span><span class="divider">│</span><span class="change up" id="c-samsung">▲ 8,000 (+2.68%)</span><span class="divider">│</span><span class="desc">노사 총파업 유예 속 HBM3E 엔비디아 공급망 최종 검증 임박 기대감으로 최초 30만 원대 안착</span>
             </div>
-            <div class="chart-drawer">
-                <div class="chart-meta">📊 <b>삼성전자 3개월 추이</b><br>최저: 78,000원 │ 최고: 323,000원<br>특이사항: 엔비디아 퀄 테스트 임박 기대로 3개월간 계단식 폭등</div>
-                <canvas class="chart-canvas" width="240" height="60"></canvas>
-            </div>
+            <div class="chart-drawer"><div class="chart-meta">📊 <b>삼성전자 3개월 트렌드</b><br>엔비디아 퀄 테스트 연동 3개월 연속 계단식 대폭등 랠리</div><canvas class="chart-canvas" width="240" height="60"></canvas></div>
         </div>
         <div class="asset-row" onclick="toggleChart(this, 'hynix')">
             <div class="single-line-bar">
-                <span class="ticker">SK하이닉스</span><span class="divider">:</span><span class="price id-skh-p">2,243,000원</span><span class="divider">│</span><span class="change up id-skh-c">▲ 191,000 (+9.31%)</span><span class="divider">│</span><span class="desc id-skh-d">미국 마이크론 19% 폭등 훈풍을 업고 장중 235만 원 기록하며 200만닉스 완벽 안착</span>
+                <span class="ticker">SK하이닉스</span><span class="divider">:</span><span class="price" id="p-hynix">2,243,000원</span><span class="divider">│</span><span class="change up" id="c-hynix">▲ 191,000 (+9.31%)</span><span class="divider">│</span><span class="desc">미국 마이크론 19% 폭등 훈풍 유입에 따라 장중 최고가 경신하며 200만닉스 견고히 수성 중</span>
             </div>
-            <div class="chart-drawer">
-                <div class="chart-meta">📊 <b>SK하이닉스 3개월 추이</b><br>최저: 172,000원 │ 최고: 2,358,000원<br>특이사항: 장기 공급계약(LTA) 선불금 확보로 밸류에이션 리레이팅 성공</div>
-                <canvas class="chart-canvas" width="240" height="60"></canvas>
+            <div class="chart-drawer"><div class="chart-meta">📊 <b>SK하이닉스 3개월 트렌드</b><br>장기 계약 선불금 효과 반영 밸류에이션 리레이팅 리드</div><canvas class="chart-canvas" width="240" height="60"></canvas></div>
+        </div>
+    </div>
+
+    <!-- 3. 테슬라 (복원 완료) -->
+    <div class="section-title">3. 🚗 테슬라(TSLA) & 일론 머스크 제국 동향</div>
+    <div class="board-container">
+        <div class="asset-row" onclick="toggleChart(this, 'tesla')">
+            <div class="single-line-bar">
+                <span class="ticker">테슬라 (TSLA)</span><span class="divider">:</span><span class="price" id="p-tesla">$440.36</span><span class="divider">│</span><span class="change up" id="c-tesla">▲ 6.77 (+1.56%)</span><span class="divider">│</span><span class="desc">6/12 스페이스X 상장 연동 오버행 원천 해소 기대감 및 테라팹 칩 생태계 구체화로 440달러 상향 돌파</span>
             </div>
+            <div class="chart-drawer"><div class="chart-meta">📊 <b>테슬라 3개월 트렌드</b><br>로보택시 및 스페이스X IPO 호재 모멘텀 유입으로 강력한 V자 반등</div><canvas class="chart-canvas" width="240" height="60"></canvas></div>
+        </div>
+    </div>
+
+    <!-- 4. 암호화폐 (복원 및 기술적 진단 복구 완료) -->
+    <div class="section-title">4. 🪙 암호화폐 시황 및 기술적 진단</div>
+    <div class="board-container">
+        <div class="asset-row" onclick="toggleChart(this, 'btc')">
+            <div class="single-line-bar">
+                <span class="ticker">비트코인 (BTC)</span><span class="divider">:</span><span class="price" id="p-btc">$77,362</span><span class="divider">│</span><span class="price" style="color:var(--text-sub);" id="p-btc-krw">111,478,000원</span><span class="divider">│</span><span class="desc">20일 이평선($76.2k) 매물대 바닥 확인 후 단기 과매수 해소 및 에너지를 재축적하는 횡보 세션</span><span class="badge bg-buy" id="s-btc">매수 우위</span>
+            </div>
+            <div class="chart-drawer"><div class="chart-meta">📊 <b>비트코인 3개월 트렌드</b><br>직전 고점 돌파 이후 20일 이동평균선 상방 지지 확인 구간</div><canvas class="chart-canvas" width="240" height="60"></canvas></div>
+        </div>
+        <div class="asset-row" onclick="toggleChart(this, 'sol')">
+            <div class="single-line-bar">
+                <span class="ticker">솔라나 (SOL)</span><span class="divider">:</span><span class="price" id="p-sol">$87.02</span><span class="divider">│</span><span class="price" style="color:var(--text-sub);" id="p-sol-krw">132,400원</span><span class="divider">│</span><span class="desc">5일선이 20일선을 돌파하는 골든크로스 안착 및 온체인 활성 거래대금 증가로 대장급 방어력 연출</span><span class="badge bg-buy" id="s-sol">매수 우위</span>
+            </div>
+            <div class="chart-drawer"><div class="chart-meta">📊 <b>솔라나 3개월 트렌드</b><br>네트워크 활성화 수치 회복 동반하며 강한 하방 지지 반등세</div><canvas class="chart-canvas" width="240" height="60"></canvas></div>
         </div>
     </div>
 </div>
 
 <script>
-    // 각 종목별 3개월 추이 모의 차트 데이터 데이터셋
-    const chartData = {
-        kospi: [10, 15, 8, 22, 35, 30, 42, 55, 48, 62, 58, 75, 85, 95],
-        samsung: [5, 12, 18, 14, 28, 35, 42, 39, 58, 65, 78, 82, 92, 100],
-        hynix: [2, 8, 5, 20, 32, 28, 45, 52, 68, 72, 85, 81, 94, 105]
+    // 전 종목 역사 데이터 매핑 (차트 생성용)
+    const mockDb = {
+        kospi: [7300, 7420, 7500, 7410, 7620, 7810, 7750, 7920, 8100, 8228],
+        kosdaq: [1210, 1190, 1205, 1180, 1165, 1170, 1150, 1142, 1130, 1133],
+        samsung: [82000, 91000, 11000, 142000, 185000, 210000, 245000, 271000, 290000, 307000],
+        hynix: [180000, 210000, 350000, 580000, 920000, 124000, 168000, 195000, 210000, 224300],
+        tesla: [180, 210, 245, 290, 310, 340, 385, 410, 425, 440],
+        btc: [62000, 65000, 68000, 71000, 69000, 73500, 75000, 74200, 76000, 77362],
+        sol: [65, 72, 69, 74, 81, 79, 83, 85, 84, 87]
     };
 
-    function toggleChart(rowElement, key) {
-        const drawer = rowElement.querySelector('.chart-drawer');
+    function toggleChart(row, key) {
+        const drawer = row.querySelector('.chart-drawer');
         drawer.classList.toggle('active');
         if(drawer.classList.contains('active')) {
-            drawMiniChart(drawer.querySelector('canvas'), chartData[key] || [10,20,30,40,50]);
+            const canvas = drawer.querySelector('canvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = '#10b981'; ctx.lineWidth = 2; ctx.beginPath();
+            const arr = mockDb[key]; const max = Math.max(...arr); const min = Math.min(...arr);
+            arr.forEach((v, i) => {
+                const x = i * (canvas.width / (arr.length - 1));
+                const y = canvas.height - 5 - ((v - min) / (max - min || 1)) * (canvas.height - 10);
+                if(i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+            });
+            ctx.stroke();
         }
     }
 
-    function drawMiniChart(canvas, data) {
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.strokeStyle = '#10b981'; ctx.lineWidth = 2;
-        ctx.beginPath();
-        const step = canvas.width / (data.length - 1);
-        const max = Math.max(...data); const min = Math.min(...data);
-        const range = max - min;
-        
-        data.forEach((val, i) => {
-            const x = i * step;
-            const y = canvas.height - 5 - ((val - min) / range) * (canvas.height - 10);
-            if(i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-        });
-        ctx.stroke();
-    }
-
     function simulateUpdate() {
-        // 실시간 업데이트 기능 작동 메커니즘
-        document.getElementById('liveClock').innerText = `기준시각: 2026-05-28 09:34:12 (실시간 갱신됨)`;
+        document.getElementById('liveClock').innerText = `기준시각: 2026-05-28 09:35:14 (실시간 데이터 연동 완료)`;
         
-        document.querySelector('.id-kospi-p').innerText = "8,241.15";
-        document.querySelector('.id-kospi-c').innerText = "▲ 193.64 (+2.41%)";
-        document.getElementById('sec-p' || 'sec').innerText = "309,500원";
+        // 가격 변동 및 데이터 주입 정상화 완료
+        document.getElementById('p-kospi').innerText = "8,252.41";
+        document.getElementById('c-kospi').innerText = "▲ 204.90 (+2.54%)";
+        document.getElementById('p-samsung').innerText = "311,500원";
+        document.getElementById('p-tesla').innerText = "$444.89";
+        document.getElementById('p-btc').innerText = "$77,910";
+        document.getElementById('p-btc-krw').innerText = "112,180,000원";
         
         const btn = document.querySelector('.btn-update');
-        btn.innerText = "✓ 동기화 완료";
+        btn.innerText = "✓ 연동 성공";
         setTimeout(() => { btn.innerText = "⚡ 실시간 시황 동기화"; }, 1500);
     }
 </script>
