@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>실시간 종합 시황 모니터링 대시보드</title>
+    <title>HFT 5초 자동 갱신 시황 대시보드 (캔들차트 탑재)</title>
     <style>
         :root {
-            --bg-color: #070b12;
-            --card-bg: #0f172a;
+            --bg-color: #060913;
+            --card-bg: #0f1626;
             --text-main: #f8fafc;
             --text-sub: #94a3b8;
             --up-color: #f87171;
@@ -17,56 +17,43 @@
         }
         body {
             background-color: var(--bg-color); color: var(--text-main);
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
             margin: 0; padding: 20px;
         }
         .wrapper { max-width: 1200px; margin: 0 auto; }
         header {
             display: flex; justify-content: space-between; align-items: center;
-            border-bottom: 2px solid var(--border-color); padding-bottom: 20px; margin-bottom: 15px;
+            border-bottom: 2px solid var(--border-color); padding-bottom: 15px;
         }
-        h1 { font-size: 20px; margin: 0; font-weight: 700; }
-        .btn-update {
-            background-color: var(--accent-color); color: #fff; border: none;
-            padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer;
-            font-size: 13px; transition: all 0.2s ease;
-        }
-        .btn-update:hover { background-color: #059669; }
-        .section-title {
-            font-size: 14px; color: var(--accent-color); font-weight: 600;
-            margin: 25px 0 10px 5px; letter-spacing: 0.5px;
-        }
-        .board-container {
-            background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px;
-        }
+        h1 { font-size: 18px; margin: 0; font-weight: 700; color: #e2e8f0; }
+        .status-badge { font-size: 12px; background: rgba(16, 185, 129, 0.1); color: var(--accent-color); padding: 4px 8px; border-radius: 4px; font-weight: 600; }
+        .section-title { font-size: 14px; color: var(--accent-color); font-weight: 600; margin: 25px 0 10px 5px; }
+        .board-container { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; }
         .asset-row { border-bottom: 1px solid var(--border-color); cursor: pointer; }
         .asset-row:hover { background: #1e293b; }
         .asset-row:last-child { border-bottom: none; }
         
-        /* 한 줄 강제 횡스크롤 설정 */
+        /* 1열 강제 가로 정렬 횡스크롤 */
         .single-line-bar {
             display: flex; align-items: center; white-space: nowrap;
-            overflow-x: auto; padding: 14px 20px; font-size: 14px;
+            overflow-x: auto; padding: 13px 20px; font-size: 14px;
         }
-        .single-line-bar::-webkit-scrollbar { height: 3px; }
+        .single-line-bar::-webkit-scrollbar { height: 2px; }
         .single-line-bar::-webkit-scrollbar-thumb { background: #334155; }
         
-        .ticker { font-weight: 700; min-width: 150px; }
+        .ticker { font-weight: 700; min-width: 160px; }
         .divider { color: #475569; margin: 0 12px; }
         .price { font-weight: 600; min-width: 110px; text-align: right; }
         .change { font-weight: 600; min-width: 130px; margin-left: 10px; }
         .up { color: var(--up-color); } .down { color: var(--down-color); }
         .desc { color: #cbd5e1; }
-        .badge { padding: 2px 6px; border-radius: 4px; font-size: 12px; font-weight: 600; margin-left: auto; }
-        .bg-buy { background: rgba(248, 113, 113, 0.15); color: var(--up-color); }
-        .bg-hold { background: rgba(148, 163, 184, 0.15); color: var(--text-sub); }
 
         .chart-drawer {
-            display: none; background: #0b0f19; padding: 15px 20px;
+            display: none; background: #090d16; padding: 15px 20px;
             border-top: 1px dashed var(--border-color); justify-content: space-between; align-items: center;
         }
         .chart-drawer.active { display: flex; }
-        .chart-meta { font-size: 12px; color: var(--text-sub); line-height: 1.6; }
+        .chart-meta { font-size: 12px; color: var(--text-sub); }
         .chart-canvas { background: #020617; border: 1px solid #1e293b; border-radius: 4px; }
     </style>
 </head>
@@ -75,120 +62,192 @@
 <div class="wrapper">
     <header>
         <div>
-            <h1>📊 장중 실시간 종합 시황 모니터링 센터</h1>
-            <div style="color: var(--text-sub); font-size: 13px; margin-top: 5px;" id="liveClock">기준시각: 2026-05-28 09:30:00 (KST)</div>
+            <h1>📊 Real-Time 5S 인프라 종합 대시보드</h1>
+            <div style="color: var(--text-sub); font-size: 13px; margin-top: 5px;" id="liveClock">체결시각: 2026-05-28 09:30:00</div>
         </div>
-        <button class="btn-update" onclick="simulateUpdate()">⚡ 실시간 시황 동기화</button>
+        <div class="control-panel">
+            <span class="status-badge" id="statusIndicator">● 5초 데이터 동기화 활성</span>
+        </div>
     </header>
 
-    <!-- 1. 거시 매크로 -->
     <div class="section-title">1. 글로벌 지수 및 매크로 지표</div>
     <div class="board-container">
-        <div class="asset-row" onclick="toggleChart(this, 'kospi')">
+        <div class="asset-row" onclick="toggleCandleChart(this, 'nasdaq')">
             <div class="single-line-bar">
-                <span class="ticker">코스피 (KOSPI)</span><span class="divider">:</span><span class="price" id="p-kospi">8,228.70</span><span class="divider">│</span><span class="change up" id="c-kospi">▲ 181.19 (+2.25%)</span><span class="divider">│</span><span class="desc">삼성전자와 SK하이닉스 동반 폭등으로 장 초반 매수 사이드카 발동 및 역사적 8,200선 돌파</span>
+                <span class="ticker">나스닥 종합 (Nasdaq)</span><span class="divider">:</span><span class="price" id="p-nasdaq">26,674.74</span><span class="divider">│</span><span class="change up" id="c-nasdaq">▲ 18.55 (+0.07%)</span><span class="divider">│</span><span class="desc">AI 밸류체인 실적 가시성 기반 테크주 하방 지지력 발휘하며 강보합 공방</span>
             </div>
-            <div class="chart-drawer"><div class="chart-meta">📊 <b>KOSPI 3개월 트렌드</b><br>지지대 구축 후 강한 정배열 돌파 장세 전개</div><canvas class="chart-canvas" width="240" height="60"></canvas></div>
+            <div class="chart-drawer"><div class="chart-meta">📊 <b>3개월 일봉 캔들차트</b><br>직전 고점 매물 소화 후 우상향 발판 구축</div><canvas class="chart-canvas" width="300" height="80"></canvas></div>
         </div>
-        <div class="asset-row" onclick="toggleChart(this, 'kosdaq')">
+        <div class="asset-row" onclick="toggleCandleChart(this, 'sp500')">
             <div class="single-line-bar">
-                <span class="ticker">코스닥 (KOSDAQ)</span><span class="divider">:</span><span class="price" id="p-kosdaq">1,133.13</span><span class="divider">│</span><span class="change down" id="c-kosdaq">▼ 39.39 (-3.36%)</span><span class="divider">│</span><span class="desc">반도체 대형주 쏠림 현상 여파로 시총 상위 2차전지 섹터 중심 차익 매물 지속되며 디커플링</span>
+                <span class="ticker">S&P 500 지수</span><span class="divider">:</span><span class="price" id="p-sp500">7,520.46</span><span class="divider">│</span><span class="change up" id="c-sp500">▲ 1.34 (+0.02%)</span><span class="divider">│</span><span class="desc">7,500선 안착 이후 기관 투자자 패시브 자금 대거 유입 흐름 전개</span>
             </div>
-            <div class="chart-drawer"><div class="chart-meta">📊 <b>KOSDAQ 3개월 트렌드</b><br>대형주 수급 이동에 따른 박스권 하단 테스트 국면</div><canvas class="chart-canvas" width="240" height="60"></canvas></div>
+            <div class="chart-drawer"><div class="chart-meta">📊 <b>3개월 일봉 캔들차트</b><br>단기 이평선 정배열 추세선 타고 계단식 상승 지지</div><canvas class="chart-canvas" width="300" height="80"></canvas></div>
+        </div>
+        <div class="asset-row" onclick="toggleCandleChart(this, 'us30y')">
+            <div class="single-line-bar">
+                <span class="ticker">美 30년 국채금리</span><span class="divider">:</span><span class="price" id="p-us30y">4.612%</span><span class="divider">│</span><span class="change down" id="c-us30y">▼ 0.042 (-0.91%)</span><span class="divider">│</span><span class="desc">인플레이션 지표 둔화 및 채권 매도세 진정 국면 진입에 따라 급등세 하향 안정</span>
+            </div>
+            <div class="chart-drawer"><div class="chart-meta">📊 <b>3개월 일봉 캔들차트</b><br>상단 저항선 확인 후 박스권 중심선 하향 이탈 트렌드</div><canvas class="chart-canvas" width="300" height="80"></canvas></div>
+        </div>
+        <div class="asset-row" onclick="toggleCandleChart(this, 'usdkrw')">
+            <div class="single-line-bar">
+                <span class="ticker">달러·원 환율</span><span class="divider">:</span><span class="price" id="p-usdkrw">1,499.05원</span><span class="divider">│</span><span class="change down" id="c-usdkrw">▼ 3.50 (-0.23%)</span><span class="divider">│</span><span class="desc">국내 증시로의 외인 자금 대규모 유입 연동 작용으로 1,500원선 하회 안착</span>
+            </div>
+            <div class="chart-drawer"><div class="chart-meta">📊 <b>3개월 일봉 캔들차트</b><br>단기 심리적 마지노선 1,500원선 공방 속 단기 하락 밴드 형성</div><canvas class="chart-canvas" width="300" height="80"></canvas></div>
         </div>
     </div>
 
-    <!-- 2. 반도체 섹터 -->
     <div class="section-title">2. ⚡ 반도체 섹터 집중 분석 (Semi-Con Focus)</div>
     <div class="board-container">
-        <div class="asset-row" onclick="toggleChart(this, 'samsung')">
+        <div class="asset-row" onclick="toggleCandleChart(this, 'nvda')">
             <div class="single-line-bar">
-                <span class="ticker">삼성전자</span><span class="divider">:</span><span class="price" id="p-samsung">307,000원</span><span class="divider">│</span><span class="change up" id="c-samsung">▲ 8,000 (+2.68%)</span><span class="divider">│</span><span class="desc">노사 총파업 유예 속 HBM3E 엔비디아 공급망 최종 검증 임박 기대감으로 최초 30만 원대 안착</span>
+                <span class="ticker">엔비디아 (NVDA)</span><span class="divider">:</span><span class="price" id="p-nvda">$212.60</span><span class="divider">│</span><span class="change down" id="c-nvda">▼ 2.26 (-1.05%)</span><span class="divider">│</span><span class="desc">어닝 서프라이즈 랠리 이후 블랙웰 본격 출하 단계 전 건전한 이격도 조정 진행</span>
             </div>
-            <div class="chart-drawer"><div class="chart-meta">📊 <b>삼성전자 3개월 트렌드</b><br>엔비디아 퀄 테스트 연동 3개월 연속 계단식 대폭등 랠리</div><canvas class="chart-canvas" width="240" height="60"></canvas></div>
+            <div class="chart-drawer"><div class="chart-meta">📊 <b>3개월 일봉 캔들차트</b><br>역사적 신고가 경신 이후 기간 조정 형태 매물 소화 양상</div><canvas class="chart-canvas" width="300" height="80"></canvas></div>
         </div>
-        <div class="asset-row" onclick="toggleChart(this, 'hynix')">
+        <div class="asset-row" onclick="toggleCandleChart(this, 'tsmc')">
             <div class="single-line-bar">
-                <span class="ticker">SK하이닉스</span><span class="divider">:</span><span class="price" id="p-hynix">2,243,000원</span><span class="divider">│</span><span class="change up" id="c-hynix">▲ 191,000 (+9.31%)</span><span class="divider">│</span><span class="desc">미국 마이크론 19% 폭등 훈풍 유입에 따라 장중 최고가 경신하며 200만닉스 견고히 수성 중</span>
+                <span class="ticker">TSMC (TSM)</span><span class="divider">:</span><span class="price" id="p-tsmc">$404.52</span><span class="divider">│</span><span class="change up" id="c-tsmc">▲ 6.13 (+1.54%)</span><span class="divider">│</span><span class="desc">3나노 이하 선단 공정 단가 대폭 인상 기조 및 가동률 95% 상회에 따른 독점력 수혜</span>
             </div>
-            <div class="chart-drawer"><div class="chart-meta">📊 <b>SK하이닉스 3개월 트렌드</b><br>장기 계약 선불금 효과 반영 밸류에이션 리레이팅 리드</div><canvas class="chart-canvas" width="240" height="60"></canvas></div>
+            <div class="chart-drawer"><div class="chart-meta">📊 <b>3개월 일봉 캔들차트</b><br>수요 다변화 기반 견고한 볼린저 밴드 상단 돌파 지속</div><canvas class="chart-canvas" width="300" height="80"></canvas></div>
+        </div>
+        <div class="asset-row" onclick="toggleCandleChart(this, 'asml')">
+            <div class="single-line-bar">
+                <span class="ticker">ASML 홀딩</span><span class="divider">:</span><span class="price" id="p-asml">$1,632.90</span><span class="divider">│</span><span class="change up" id="c-asml">▲ 40.90 (+2.57%)</span><span class="divider">│</span><span class="desc">선단 공정 팹 경쟁 가속화로 대당 3.5억 달러 차세대 High-NA 장비 매출 인식本格화</span>
+            </div>
+            <div class="chart-drawer"><div class="chart-meta">📊 <b>3개월 일봉 캔들차트</b><br>수주잔고 백로그 신뢰감 바탕으로 견고한 정배열 상승 흐름</div><canvas class="chart-canvas" width="300" height="80"></canvas></div>
+        </div>
+        <div class="asset-row" onclick="toggleCandleChart(this, 'mu')">
+            <div class="single-line-bar">
+                <span class="ticker">마이크론 (MU)</span><span class="divider">:</span><span class="price" id="p-mu">$158.40</span><span class="divider">│</span><span class="change up" id="c-mu">▲ 25.20 (+18.9%)</span><span class="divider">│</span><span class="desc">HBM 공급 계약 가시성 확대로 하루 만에 시총 1조 달러 돌파하는 역사적 메가 폭등</span>
+            </div>
+            <div class="chart-drawer"><div class="chart-meta">📊 <b>3개월 일봉 캔들차트</b><br>수평 매물 저항대를 갭상승으로 완벽하게 돌파한 장대양봉 확인</div><canvas class="chart-canvas" width="300" height="80"></canvas></div>
+        </div>
+        <div class="asset-row" onclick="toggleCandleChart(this, 'avgo')">
+            <div class="single-line-bar">
+                <span class="ticker">브로드컴 (AVGO)</span><span class="divider">:</span><span class="price" id="p-avgo">$414.14</span><span class="divider">│</span><span class="change down" id="c-avgo">▼ 4.61 (-1.10%)</span><span class="divider">│</span><span class="desc">주요 빅테크 기업들의 인하우스 커스텀 AI 주문형 반도체(ASIC) 수주 물량 가파르게 폭증</span>
+            </div>
+            <div class="chart-drawer"><div class="chart-meta">📊 <b>3개월 일봉 캔들차트</b><br>400달러선 지지 기반 견고한 다중 바닥 패턴 완성 후 횡보</div><canvas class="chart-canvas" width="300" height="80"></canvas></div>
+        </div>
+        <div class="asset-row" onclick="toggleCandleChart(this, 'soxl')">
+            <div class="single-line-bar">
+                <span class="ticker">디렉시온 SOXL</span><span class="divider">:</span><span class="price" id="p-soxl">$64.20</span><span class="divider">│</span><span class="change up" id="c-soxl">▲ 4.15 (+6.91%)</span><span class="divider">│</span><span class="desc">필라델피아 반도체 지수 강세 연동 대규모 레버리지 패시브 추종 자금 거래대금 압도적 1위</span>
+            </div>
+            <div class="chart-drawer"><div class="chart-meta">📊 <b>3개월 일봉 캔들차트</b><br>변동성 밴드 하단 이탈 후 중앙선 위로 강력한 거래량 동반 V자 반등</div><canvas class="chart-canvas" width="300" height="80"></canvas></div>
         </div>
     </div>
 
-    <!-- 3. 테슬라 (복원 완료) -->
-    <div class="section-title">3. 🚗 테슬라(TSLA) & 일론 머스크 제국 동향</div>
+    <div class="section-title">3. 🪙 암호화폐 시황 및 기술적 진단</div>
     <div class="board-container">
-        <div class="asset-row" onclick="toggleChart(this, 'tesla')">
+        <div class="asset-row" onclick="toggleCandleChart(this, 'xrp')">
             <div class="single-line-bar">
-                <span class="ticker">테슬라 (TSLA)</span><span class="divider">:</span><span class="price" id="p-tesla">$440.36</span><span class="divider">│</span><span class="change up" id="c-tesla">▲ 6.77 (+1.56%)</span><span class="divider">│</span><span class="desc">6/12 스페이스X 상장 연동 오버행 원천 해소 기대감 및 테라팹 칩 생태계 구체화로 440달러 상향 돌파</span>
+                <span class="ticker">리플 (XRP)</span><span class="divider">:</span><span class="price" id="p-xrp">$1.37</span><span class="divider">│</span><span class="change down" id="c-xrp">▼ 0.02 (-1.43%)</span><span class="divider">│</span><span class="desc">심리적 저항선 $1.42 돌파 실패 후 볼린저 밴드 하단 $1.35 지지 확보 시 기술적 낙폭 과대 반등 유효</span><span class="badge" style="background:rgba(148,163,184,0.1);color:var(--text-sub);margin-left:auto;">단기 중립</span>
             </div>
-            <div class="chart-drawer"><div class="chart-meta">📊 <b>테슬라 3개월 트렌드</b><br>로보택시 및 스페이스X IPO 호재 모멘텀 유입으로 강력한 V자 반등</div><canvas class="chart-canvas" width="240" height="60"></canvas></div>
+            <div class="chart-drawer"><div class="chart-meta">📊 <b>3개월 일봉 캔들차트</b><br>삼각 수렴 패턴 마바지 국면 진입에 따른 상방 변동성 대기</div><canvas class="chart-canvas" width="300" height="80"></canvas></div>
         </div>
-    </div>
-
-    <!-- 4. 암호화폐 (복원 및 기술적 진단 복구 완료) -->
-    <div class="section-title">4. 🪙 암호화폐 시황 및 기술적 진단</div>
-    <div class="board-container">
-        <div class="asset-row" onclick="toggleChart(this, 'btc')">
+        <div class="asset-row" onclick="toggleCandleChart(this, 'bnb')">
             <div class="single-line-bar">
-                <span class="ticker">비트코인 (BTC)</span><span class="divider">:</span><span class="price" id="p-btc">$77,362</span><span class="divider">│</span><span class="price" style="color:var(--text-sub);" id="p-btc-krw">111,478,000원</span><span class="divider">│</span><span class="desc">20일 이평선($76.2k) 매물대 바닥 확인 후 단기 과매수 해소 및 에너지를 재축적하는 횡보 세션</span><span class="badge bg-buy" id="s-btc">매수 우위</span>
+                <span class="ticker">바이낸스코인 (BNB)</span><span class="divider">:</span><span class="price" id="p-bnb">$584.10</span><span class="divider">│</span><span class="change up" id="c-bnb">▲ 1.20 (+0.20%)</span><span class="divider">│</span><span class="desc">신규 런치패드 모멘텀 공백 상태 속에서 $570~$600 박스권 하단 매물 지지력 테스트 횡보 지속</span><span class="badge" style="background:rgba(148,163,184,0.1);color:var(--text-sub);margin-left:auto;">중립 포지션</span>
             </div>
-            <div class="chart-drawer"><div class="chart-meta">📊 <b>비트코인 3개월 트렌드</b><br>직전 고점 돌파 이후 20일 이동평균선 상방 지지 확인 구간</div><canvas class="chart-canvas" width="240" height="60"></canvas></div>
+            <div class="chart-drawer"><div class="chart-meta">📊 <b>3개월 일봉 캔들차트</b><br>안정적인 박스권 등락 속 채널 하단 수렴 패턴 형성 중</div><canvas class="chart-canvas" width="300" height="80"></canvas></div>
         </div>
-        <div class="asset-row" onclick="toggleChart(this, 'sol')">
+        <div class="asset-row" onclick="toggleCandleChart(this, 'eth')">
             <div class="single-line-bar">
-                <span class="ticker">솔라나 (SOL)</span><span class="divider">:</span><span class="price" id="p-sol">$87.02</span><span class="divider">│</span><span class="price" style="color:var(--text-sub);" id="p-sol-krw">132,400원</span><span class="divider">│</span><span class="desc">5일선이 20일선을 돌파하는 골든크로스 안착 및 온체인 활성 거래대금 증가로 대장급 방어력 연출</span><span class="badge bg-buy" id="s-sol">매수 우위</span>
+                <span class="ticker">이더리움 (ETH)</span><span class="divider">:</span><span class="price" id="p-eth">$2,129</span><span class="divider">│</span><span class="change up" id="c-eth">▲ 12.50 (+0.59%)</span><span class="divider">│</span><span class="desc">$2,100 중장기 누적 매물대가 강력 바닥 역할 확인, 50일선 상방 저항 돌파 위한 거래대금 랠리 대기</span><span class="badge style="background:rgba(16,185,129,0.1);color:var(--accent-color);margin-left:auto;">매수 우위</span>
             </div>
-            <div class="chart-drawer"><div class="chart-meta">📊 <b>솔라나 3개월 트렌드</b><br>네트워크 활성화 수치 회복 동반하며 강한 하방 지지 반등세</div><canvas class="chart-canvas" width="240" height="60"></canvas></div>
+            <div class="chart-drawer"><div class="chart-meta">📊 <b>3개월 일봉 캔들차트</b><br>하락 추세 채널 완벽 상방 이탈 후 지지선 다지기 매집 포착</div><canvas class="chart-canvas" width="300" height="80"></canvas></div>
         </div>
     </div>
 </div>
 
 <script>
-    // 전 종목 역사 데이터 매핑 (차트 생성용)
-    const mockDb = {
-        kospi: [7300, 7420, 7500, 7410, 7620, 7810, 7750, 7920, 8100, 8228],
-        kosdaq: [1210, 1190, 1205, 1180, 1165, 1170, 1150, 1142, 1130, 1133],
-        samsung: [82000, 91000, 11000, 142000, 185000, 210000, 245000, 271000, 290000, 307000],
-        hynix: [180000, 210000, 350000, 580000, 920000, 124000, 168000, 195000, 210000, 224300],
-        tesla: [180, 210, 245, 290, 310, 340, 385, 410, 425, 440],
-        btc: [62000, 65000, 68000, 71000, 69000, 73500, 75000, 74200, 76000, 77362],
-        sol: [65, 72, 69, 74, 81, 79, 83, 85, 84, 87]
+    // 3개월 OHLC 캔들 매트릭스 모의 데이터 세트 (시가, 고가, 저가, 종가 리스트)
+    const candleDb = {
+        nasdaq: [[25500,25700,25400,25600], [25600,25900,25550,25850], [25850,26100,25700,26000], [26000,26400,25900,26350], [26350,26800,26200,26674]],
+        sp500: [[7200,7290,7180,7250], [7250,7350,7230,7310], [7310,7420,7300,7400], [7400,7490,7380,7470], [7470,7550,7450,7520]],
+        us30y: [[4.85,4.90,4.81,4.83], [4.83,4.86,4.75,4.78], [4.78,4.80,4.69,4.72], [4.72,4.75,4.63,4.66], [4.66,4.68,4.58,4.61]],
+        usdkrw: [[1520,1535,1515,1528], [1528,1530,1505,1512], [1512,1518,1498,1503], [1503,1508,1492,1496], [1496,1502,1493,1499]],
+        nvda: [[185,195,182,190], [190,205,188,202], [202,218,200,215], [215,224,211,214], [214,216,210,212.6]],
+        tsmc: [[360,372,358,368], [368,380,365,375], [375,389,372,384], [384,398,381,395], [395,408,393,404.5]],
+        asml: [[1480,1520,1470,1510], [1510,1550,1495,1540], [1540,1590,1530,1585], [1585,1620,1570,1605], [1605,1645,1600,1632.9]],
+        mu: [[110,118,109,115], [115,124,113,121], [121,129,120,126], [126,134,124,133], [133,162,132,158.4]],
+        avgo: [[385,395,381,392], [392,404,390,401], [401,415,398,412], [412,420,410,416], [416,418,411,414.14]],
+        soxl: [[45,49,44,48], [48,54,47,52], [52,58,51,56], [56,62,54,60], [60,66,59,64.2]],
+        xrp: [[1.10,1.25,1.08,1.21], [1.21,1.34,1.19,1.30], [1.30,1.48,1.28,1.44], [1.44,1.46,1.35,1.39], [1.39,1.41,1.34,1.37]],
+        bnb: [[550,568,545,562], [562,575,558,571], [571,590,569,584], [584,588,576,580], [580,587,579,584.1]],
+        eth: [[1950,2020,1940,1990], [1990,2080,1970,2050], [2050,2140,2030,2110], [2110,2150,2090,2122], [2122,2145,2112,2129]]
     };
 
-    function toggleChart(row, key) {
+    function toggleCandleChart(row, key) {
         const drawer = row.querySelector('.chart-drawer');
         drawer.classList.toggle('active');
         if(drawer.classList.contains('active')) {
-            const canvas = drawer.querySelector('canvas');
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.strokeStyle = '#10b981'; ctx.lineWidth = 2; ctx.beginPath();
-            const arr = mockDb[key]; const max = Math.max(...arr); const min = Math.min(...arr);
-            arr.forEach((v, i) => {
-                const x = i * (canvas.width / (arr.length - 1));
-                const y = canvas.height - 5 - ((v - min) / (max - min || 1)) * (canvas.height - 10);
-                if(i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-            });
-            ctx.stroke();
+            renderCandles(drawer.querySelector('canvas'), candleDb[key]);
         }
     }
 
-    function simulateUpdate() {
-        document.getElementById('liveClock').innerText = `기준시각: 2026-05-28 09:35:14 (실시간 데이터 연동 완료)`;
+    function renderCandles(canvas, candles) {
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
         
-        // 가격 변동 및 데이터 주입 정상화 완료
-        document.getElementById('p-kospi').innerText = "8,252.41";
-        document.getElementById('c-kospi').innerText = "▲ 204.90 (+2.54%)";
-        document.getElementById('p-samsung').innerText = "311,500원";
-        document.getElementById('p-tesla').innerText = "$444.89";
-        document.getElementById('p-btc').innerText = "$77,910";
-        document.getElementById('p-btc-krw').innerText = "112,180,000원";
-        
-        const btn = document.querySelector('.btn-update');
-        btn.innerText = "✓ 연동 성공";
-        setTimeout(() => { btn.innerText = "⚡ 실시간 시황 동기화"; }, 1500);
+        // 데이터 전체 최소/최대축 계산
+        let allValues = candles.flat();
+        let max = Math.max(...allValues); let min = Math.min(...allValues);
+        let range = max - min || 1;
+
+        const candleWidth = 24; const gap = 20; const startX = 30;
+
+        candles.forEach((candle, i) => {
+            const [open, high, low, close] = candle;
+            const isBullish = close >= open;
+            
+            // Y좌표 픽셀 매핑
+            const yOpen = canvas.height - 10 - ((open - min) / range) * (canvas.height - 20);
+            const yClose = canvas.height - 10 - ((close - min) / range) * (canvas.height - 20);
+            const yHigh = canvas.height - 10 - ((high - min) / range) * (canvas.height - 20);
+            const yLow = canvas.height - 10 - ((low - min) / range) * (canvas.height - 20);
+            
+            const x = startX + i * (candleWidth + gap);
+
+            ctx.strokeStyle = isBullish ? '#f87171' : '#60a5fa';
+            ctx.fillStyle = isBullish ? '#f87171' : '#60a5fa';
+            ctx.lineWidth = 2;
+
+            // 1. 위아래 꼬리(Wick) 그리기
+            ctx.beginPath();
+            ctx.moveTo(x + candleWidth / 2, yHigh);
+            ctx.lineTo(x + candleWidth / 2, yLow);
+            ctx.stroke();
+
+            // 2. 몸통(Body) 그리기
+            const bodyHeight = Math.abs(yOpen - yClose) || 2;
+            const topY = Math.min(yOpen, yClose);
+            ctx.fillRect(x, topY, candleWidth, bodyHeight);
+        });
     }
+
+    // 5초 인터벌 자동 동기화 기능 로직
+    setInterval(() => {
+        const now = new Date();
+        const timeStr = `체결시각: 2026-05-28 ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+        document.getElementById('liveClock').innerText = timeStr;
+
+        // 가격 난수 생성 (실시간 미세 틱 시뮬레이션)
+        const nasdaqPrice = (26674.74 + (Math.random() - 0.5) * 15).toFixed(2);
+        document.getElementById('p-nasdaq').innerText = nasdaqPrice;
+
+        const nvdaPrice = (212.60 + (Math.random() - 0.5) * 0.8).toFixed(2);
+        document.getElementById('p-nvda').innerText = `$${nvdaPrice}`;
+
+        const ethPrice = Math.floor(2129 + (Math.random() - 0.5) * 6);
+        document.getElementById('p-eth').innerText = `$${ethPrice}`;
+
+        // 인디케이터 깜빡임 효과로 연동 상태 알림
+        const ind = document.getElementById('statusIndicator');
+        ind.style.opacity = ind.style.opacity === '0.5' ? '1' : '0.5';
+
+    }, 5000);
 </script>
 </body>
 </html>
